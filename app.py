@@ -1,3 +1,9 @@
+import random
+
+import firebase_admin
+import os
+from dotenv import load_dotenv
+load_dotenv()  # โหลดค่าจากไฟล์ .env ตอนรันบนเครื่อง (ไม่มีผลตอน deploy จริงที่ตั้ง env var ผ่าน hosting)
 from flask import Flask, request, abort, render_template
 
 from ai_model import predict_all
@@ -16,9 +22,7 @@ from linebot.models import (
     MessageAction
 )
 
-import random
 
-import firebase_admin
 from firebase_admin import credentials, firestore
 
 
@@ -43,8 +47,8 @@ app = Flask(__name__)
 # LINE CONFIG
 # =====================================
 
-LINE_CHANNEL_ACCESS_TOKEN = "tC6bTXbnFolnQGa14/SHAYMBy8dCkrX43rkzEHfSTGOoZSpIeC5G9ajYGbgmu8XcsIbybiSzcZPiS+2pIFN2NbWOal0GrQCKKd8icXA0FkLJOFpbJ1h1knsfVP+Tsyn9r6eYOXLFs794bFoS/hSCswdB04t89/1O/w1cDnyilFU="
-LINE_CHANNEL_SECRET = "6234a6be3f1352d68e1d04d46d5a0b58"
+LINE_CHANNEL_ACCESS_TOKEN = os.environ["LINE_CHANNEL_ACCESS_TOKEN"]
+LINE_CHANNEL_SECRET = os.environ["LINE_CHANNEL_SECRET"]
 
 line_bot_api = LineBotApi(LINE_CHANNEL_ACCESS_TOKEN)
 handler = WebhookHandler(LINE_CHANNEL_SECRET)
