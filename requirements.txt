@@ -1,0 +1,9 @@
+Flask==3.0.3
+line-bot-sdk==3.11.0
+firebase-admin==6.5.0
+python-dotenv==1.0.1
+pandas==2.2.2
+joblib==1.4.2
+pythainlp==5.3.4
+scikit-learn==1.8.0
+gunicorn==22.0.0

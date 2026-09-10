@@ -379,10 +379,11 @@ def handle_message(event):
         "risk_self_harm",
         "risk_suicidal_ideation",
         "risk_suicide_plan",
-        "risk_immediate_danger"
+        "risk_immediate_danger",
+        "risk_passive"
     ]
 
-    if risk in high_risk:
+    if risk in high_risk or intent == "crisis_help":
 
         reply = (
             "🚨 ผมเป็นห่วงคุณมากนะครับ\n\n"
@@ -396,13 +397,13 @@ def handle_message(event):
         replies = []
 
         # emotion
-        if result["emotion_conf"] >= 0.65:
+        if result["emotion_conf"] >= 0.50:
             replies.append(emotion_reply(emotion))
 
         # problem
         p_reply = ""
 
-        if result["problem_conf"] >= 0.70:
+        if result["problem_conf"] >= 0.50:
 
             p_reply = problem_reply(problem)
 
@@ -412,7 +413,7 @@ def handle_message(event):
         # support
         s_reply = ""
 
-        if result["support_conf"] >= 0.70:
+        if result["support_conf"] >= 0.45:
 
             s_reply = support_reply(support)
 
@@ -422,7 +423,7 @@ def handle_message(event):
         # style
         st_reply = ""
 
-        if result["style_conf"] >= 0.75:
+        if result["style_conf"] >= 0.50:
 
             st_reply = style_reply(style)
 
