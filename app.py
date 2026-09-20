@@ -4,7 +4,7 @@ import firebase_admin
 import os
 from dotenv import load_dotenv
 load_dotenv()  # โหลดค่าจากไฟล์ .env ตอนรันบนเครื่อง (ไม่มีผลตอน deploy จริงที่ตั้ง env var ผ่าน hosting)
-from flask import Flask, request, abort, render_template
+from flask import Flask, json, request, abort, render_template
 
 from ai_model import predict_all
 
@@ -29,8 +29,18 @@ from firebase_admin import credentials, firestore
 # =====================================
 # Firebase
 # =====================================
-
-cred = credentials.Certificate("serviceAccountKey.json")
+import json  
+ 
+firebase_creds_json = os.environ.get("FIREBASE_CREDENTIALS_JSON")
+ 
+if firebase_creds_json:
+    # กรณี deploy จริง: อ่านจาก environment variable
+    cred_dict = json.loads(firebase_creds_json)
+    cred = credentials.Certificate(cred_dict)
+else:
+    # กรณีรันในเครื่องตัวเอง (local): ใช้ไฟล์ตามเดิม
+    cred = credentials.Certificate("serviceAccountKey.json")
+ 
 firebase_admin.initialize_app(cred)
 
 db = firestore.client()
