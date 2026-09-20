@@ -15,8 +15,8 @@ Accuracy : 65.5%
 Cross Validation : 72.6%
 ----------------------------------------
 Support Need
-Accuracy : 76.3%
-Cross Validation : 72.1%
+Accuracy : 73.8%
+Cross Validation : 78.6%
 ----------------------------------------
 Intent
 Accuracy : 76.3%

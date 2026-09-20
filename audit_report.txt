@@ -1,4 +1,4 @@
-Dataset audit — directory: C:\Users\MeNos\Desktop\project\dataset
+Dataset audit — directory: C:\Users\MeNos\OneDrive\Desktop\project\dataset
 
 ==============================================================================
 FILE: risk.csv  (rows: 1211, labels: 8)
@@ -55,16 +55,16 @@ Exact duplicate rows (same text + same label): 0
 Cross-label conflicts (same text, different labels): 0
 
 ==============================================================================
-FILE: support_need.csv  (rows: 190, labels: 6)
+FILE: support_need.csv  (rows: 210, labels: 6)
 ==============================================================================
 
 Label distribution:
+  calming                        40
   encouragement                  38
   advice                         37
-  calming                        30
+  crisis_support                 36
   information                    30
   listener                       29
-  crisis_support                 26
 
 Exact duplicate rows (same text + same label): 0
 
@@ -88,13 +88,13 @@ Exact duplicate rows (same text + same label): 0
 Cross-label conflicts (same text, different labels): 0
 
 ==============================================================================
-FILE: conversation_style.csv  (rows: 195, labels: 7)
+FILE: conversation_style.csv  (rows: 184, labels: 7)
 ==============================================================================
 
 Label distribution:
-  serious                        40
   friendly                       37
   casual                         30
+  serious                        29
   detailed                       28
   direct                         20
   gentle                         20
@@ -108,20 +108,20 @@ Cross-label conflicts (same text, different labels): 0
 CROSS-FILE TEXT REUSE (informational only, not an error)
 ==============================================================================
 
-Texts appearing in more than one dataset file: 56
+Texts appearing in more than one dataset file: 53
   "กินข้าวยัง" in 3 files -> risk:normal, emotion:neutral, intent:smalltalk
   "ช่วยอยู่ข้างๆหน่อย" in 3 files -> support_need:encouragement, intent:emotional_support, conversation_style:gentle
+  "อยากได้คำปลอบใจ" in 3 files -> support_need:encouragement, intent:emotional_support, conversation_style:gentle
   "วันนี้อากาศดี" in 3 files -> risk:normal, emotion:neutral, problem:none
   "รู้สึกโดดเดี่ยว" in 3 files -> risk:depression, emotion:sad, problem:social
-  "อยากได้คำปลอบใจ" in 3 files -> support_need:encouragement, intent:emotional_support, conversation_style:gentle
   "กำลังร้องไห้หนักมาก" in 2 files -> support_need:crisis_support, intent:crisis_help
-  "กำลังทำอะไรอยู่" in 2 files -> intent:smalltalk, conversation_style:casual
-  "กลัวอนาคตที่ยังมาไม่ถึง" in 2 files -> risk:stress, emotion:fear
+  "ขอกำลังใจหน่อย" in 2 files -> support_need:encouragement, intent:emotional_support
   "ขอบคุณนะ" in 2 files -> risk:normal, problem:none
-  "ขอพื้นที่ระบายหน่อย" in 2 files -> support_need:listener, intent:venting
-  "ควรเริ่มจากตรงไหนดี" in 2 files -> support_need:advice, intent:ask_advice
+  "ขอคำพูดอ่อนโยนหน่อย" in 2 files -> support_need:encouragement, conversation_style:gentle
   "ควรทำยังไงดี" in 2 files -> support_need:advice, intent:ask_advice
+  "ควรเริ่มจากตรงไหนดี" in 2 files -> support_need:advice, intent:ask_advice
   "ช่วยปลอบเราที" in 2 files -> intent:emotional_support, conversation_style:gentle
+  "ขอพื้นที่ระบายหน่อย" in 2 files -> support_need:listener, intent:venting
   "ช่วยหยุดความคิดนี้ที" in 2 files -> support_need:crisis_support, intent:crisis_help
   "ช่วยอยู่เป็นเพื่อนหน่อย" in 2 files -> support_need:listener, intent:venting
-  ... and 41 more
+  ... and 38 more

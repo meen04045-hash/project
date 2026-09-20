@@ -4,7 +4,7 @@ PyThaiNLP Version: 5.3.4
 LinearSVC Parameters: C=1.0, class_weight='balanced', random_state=42
 CalibratedClassifierCV Parameters: cv=min(5, smallest training class size)
 TF-IDF Parameters: tokenizer=PyThaiNLP newmm, token_pattern=None
-Training Date: 2026-08-29T23:02:47
+Training Date: 2026-09-20T21:43:39
 
 Risk
 Vocabulary Size: 3771
@@ -22,9 +22,9 @@ Training Samples: 231
 Testing Samples: 58
 
 Support Need
-Vocabulary Size: 1624
-Training Samples: 152
-Testing Samples: 38
+Vocabulary Size: 1707
+Training Samples: 168
+Testing Samples: 42
 
 Intent
 Vocabulary Size: 1462

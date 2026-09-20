@@ -50,17 +50,17 @@ none: 20
 ----------------------------------------
 
 Support Need Dataset
-Total Samples: 190
+Total Samples: 210
 Number of Labels: 6
 Missing Values: 0
 Duplicate Rows: 0
 Label Distribution:
+calming: 40
 encouragement: 38
 advice: 37
-calming: 30
+crisis_support: 36
 information: 30
 listener: 29
-crisis_support: 26
 
 ----------------------------------------
 

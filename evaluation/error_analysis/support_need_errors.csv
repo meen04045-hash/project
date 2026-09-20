@@ -1,10 +1,12 @@
 ﻿Original Text,True Label,Predicted Label,Confidence Score
-อยากพูดสิ่งที่อยู่ในใจ,listener,encouragement,0.41467144175348736
-รู้สึกควบคุมตัวเองไม่ได้,calming,crisis_support,0.6346076230820212
-ควรขอความช่วยเหลือจากใครดี,advice,crisis_support,0.5822892500713378
-ช่วยติดต่อสายด่วนให้หน่อย,crisis_support,calming,0.5284569740105259
-อยากได้ข้อมูลหรือความรู้,information,advice,0.43862132903696754
-ช่วยพาเรากลับมาสงบที,calming,crisis_support,0.2690596376419139
-ตอนนี้ใจไม่ไหวจริงๆ,crisis_support,calming,0.36130964240876884
-อยากจัดการอารมณ์ตัวเอง,advice,information,0.36736506163019816
-รู้สึกเหมือนจะไม่ไหวแล้ว,encouragement,crisis_support,0.320157840910516
+อยากได้พลังบวก,encouragement,advice,0.3687185416145698
+กำลังร้องไห้หนักมาก,crisis_support,calming,0.2991135419074306
+อยากจัดการอารมณ์ตัวเอง,advice,crisis_support,0.40587082374956135
+อยากพูดออกมาบ้าง,listener,encouragement,0.3494769105818966
+อยากหยุดความฟุ้งซ่าน,calming,listener,0.3495385433433754
+การดูแลตัวเองทางใจทำยังไง,information,advice,0.3472775088515421
+รู้สึกควบคุมตัวเองไม่ได้,calming,crisis_support,0.7087301581920521
+เหงื่อแตกทั้งที่ไม่ได้ร้อน,calming,encouragement,0.2955937200275527
+ช่วยคิดหน่อยได้ไหม,advice,encouragement,0.31640755231833023
+ทำไมถึงนอนไม่หลับเวลาเครียด,information,calming,0.617639385523518
+ควรขอความช่วยเหลือจากใครดี,advice,crisis_support,0.5274761539120136
