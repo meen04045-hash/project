@@ -1,0 +1,17 @@
+Task: risk
+Model: Logistic Regression
+
+                        precision    recall  f1-score   support
+
+            depression       0.43      0.39      0.41        31
+                normal       0.76      0.85      0.80        33
+ risk_immediate_danger       0.66      0.73      0.69        26
+          risk_passive       0.55      0.62      0.58        39
+        risk_self_harm       0.88      0.88      0.88        26
+risk_suicidal_ideation       0.62      0.46      0.53        28
+     risk_suicide_plan       0.79      0.73      0.76        26
+                stress       0.74      0.74      0.74        34
+
+              accuracy                           0.67       243
+             macro avg       0.68      0.67      0.67       243
+          weighted avg       0.67      0.67      0.67       243

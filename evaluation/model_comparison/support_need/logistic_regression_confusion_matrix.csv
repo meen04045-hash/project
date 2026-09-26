@@ -1,0 +1,7 @@
+﻿,advice,calming,crisis_support,encouragement,information,listener
+advice,5,0,1,0,0,1
+calming,0,5,2,0,0,1
+crisis_support,0,2,4,1,0,0
+encouragement,2,0,0,6,0,0
+information,1,1,0,0,4,0
+listener,0,0,0,0,0,6

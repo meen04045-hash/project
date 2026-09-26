@@ -1,0 +1,18 @@
+Task: problem
+Model: Random Forest
+
+              precision    recall  f1-score   support
+
+    academic       0.35      0.70      0.47        10
+      family       0.80      0.67      0.73         6
+   financial       0.50      0.29      0.36         7
+      health       1.00      0.33      0.50         9
+        none       1.00      0.50      0.67         6
+relationship       1.00      0.67      0.80         6
+ self_esteem       0.47      0.78      0.58         9
+      social       0.67      0.75      0.71         8
+        work       0.57      0.44      0.50         9
+
+    accuracy                           0.57        70
+   macro avg       0.71      0.57      0.59        70
+weighted avg       0.68      0.57      0.58        70

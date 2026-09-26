@@ -1,43 +1,43 @@
 ==================================================
 Problem Model Evaluation
 ==================================================
-Accuracy: 0.655172
+Accuracy: 0.785714
 
 Precision / Recall / F1-score:
 
               precision    recall  f1-score   support
 
-    academic       0.86      0.75      0.80         8
-      family       0.57      0.67      0.62         6
-   financial       0.67      0.57      0.62         7
-      health       0.50      0.50      0.50         6
-        none       0.50      0.50      0.50         4
-relationship       0.71      0.83      0.77         6
- self_esteem       0.78      0.78      0.78         9
-      social       0.50      0.67      0.57         6
-        work       0.75      0.50      0.60         6
+    academic       0.88      0.70      0.78        10
+      family       0.83      0.83      0.83         6
+   financial       1.00      0.86      0.92         7
+      health       1.00      0.67      0.80         9
+        none       0.83      0.83      0.83         6
+relationship       0.86      1.00      0.92         6
+ self_esteem       0.58      0.78      0.67         9
+      social       0.71      0.62      0.67         8
+        work       0.67      0.89      0.76         9
 
-    accuracy                           0.66        58
-   macro avg       0.65      0.64      0.64        58
-weighted avg       0.67      0.66      0.66        58
+    accuracy                           0.79        70
+   macro avg       0.82      0.80      0.80        70
+weighted avg       0.81      0.79      0.79        70
 
 Confusion Matrix:
 Labels: ['academic', 'family', 'financial', 'health', 'none', 'relationship', 'self_esteem', 'social', 'work']
-[[6 0 0 1 0 0 0 0 1]
- [0 4 1 0 0 0 0 1 0]
- [0 0 4 1 1 1 0 0 0]
- [0 0 0 3 1 0 1 1 0]
- [0 1 0 1 2 0 0 0 0]
- [0 1 0 0 0 5 0 0 0]
+[[7 0 0 0 0 0 0 0 3]
+ [0 5 0 0 0 1 0 0 0]
+ [0 0 6 0 0 0 0 0 1]
+ [0 0 0 6 1 0 2 0 0]
+ [0 1 0 0 5 0 0 0 0]
+ [0 0 0 0 0 6 0 0 0]
  [0 0 0 0 0 0 7 2 0]
- [1 1 0 0 0 0 0 4 0]
- [0 0 1 0 0 1 1 0 3]]
+ [0 0 0 0 0 0 3 5 0]
+ [1 0 0 0 0 0 0 0 8]]
 
 5-Fold Cross Validation:
-Fold 1: 0.775862
-Fold 2: 0.689655
-Fold 3: 0.810345
-Fold 4: 0.724138
-Fold 5: 0.631579
-Mean Accuracy: 0.726316
-Standard Deviation: 0.062991
+Fold 1: 0.742857
+Fold 2: 0.828571
+Fold 3: 0.814286
+Fold 4: 0.757143
+Fold 5: 0.724638
+Mean Accuracy: 0.773499
+Standard Deviation: 0.040720

@@ -1,0 +1,16 @@
+Task: intent
+Model: Random Forest
+
+                   precision    recall  f1-score   support
+
+       ask_advice       0.62      0.83      0.71         6
+       assessment       1.00      0.60      0.75         5
+      crisis_help       0.67      0.86      0.75         7
+emotional_support       1.00      0.67      0.80         6
+      information       1.00      0.33      0.50         3
+        smalltalk       0.40      0.80      0.53         5
+          venting       0.67      0.33      0.44         6
+
+         accuracy                           0.66        38
+        macro avg       0.77      0.63      0.64        38
+     weighted avg       0.75      0.66      0.66        38

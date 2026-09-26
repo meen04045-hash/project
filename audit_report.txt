@@ -36,19 +36,19 @@ Exact duplicate rows (same text + same label): 0
 Cross-label conflicts (same text, different labels): 0
 
 ==============================================================================
-FILE: problem.csv  (rows: 289, labels: 9)
+FILE: problem.csv  (rows: 349, labels: 9)
 ==============================================================================
 
 Label distribution:
+  academic                       49
   self_esteem                    45
-  academic                       37
+  health                         43
+  work                           42
+  social                         42
   financial                      36
-  health                         31
-  work                           30
+  none                           32
   relationship                   30
   family                         30
-  social                         30
-  none                           20
 
 Exact duplicate rows (same text + same label): 0
 

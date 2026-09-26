@@ -1,0 +1,8 @@
+﻿,angry,confused,fear,happy,neutral,sad,tired
+angry,5,0,0,0,0,1,2
+confused,0,3,0,0,0,3,2
+fear,0,0,6,0,0,2,0
+happy,0,0,0,7,0,2,1
+neutral,0,0,0,1,8,0,0
+sad,1,1,1,0,0,7,3
+tired,0,0,0,1,0,0,10

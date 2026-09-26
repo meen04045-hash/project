@@ -1,0 +1,16 @@
+Task: emotion
+Model: Random Forest
+
+              precision    recall  f1-score   support
+
+       angry       0.83      0.62      0.71         8
+    confused       0.75      0.38      0.50         8
+        fear       1.00      0.62      0.77         8
+       happy       0.41      0.70      0.52        10
+     neutral       1.00      0.67      0.80         9
+         sad       0.50      0.46      0.48        13
+       tired       0.59      0.91      0.71        11
+
+    accuracy                           0.63        67
+   macro avg       0.73      0.62      0.64        67
+weighted avg       0.70      0.63      0.63        67

@@ -1,0 +1,16 @@
+Task: emotion
+Model: SVM
+
+              precision    recall  f1-score   support
+
+       angry       0.83      0.62      0.71         8
+    confused       0.75      0.38      0.50         8
+        fear       0.86      0.75      0.80         8
+       happy       0.78      0.70      0.74        10
+     neutral       1.00      0.89      0.94         9
+         sad       0.47      0.54      0.50        13
+       tired       0.56      0.91      0.69        11
+
+    accuracy                           0.69        67
+   macro avg       0.75      0.68      0.70        67
+weighted avg       0.72      0.69      0.69        67

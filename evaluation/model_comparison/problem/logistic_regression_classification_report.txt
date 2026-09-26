@@ -1,0 +1,18 @@
+Task: problem
+Model: Logistic Regression
+
+              precision    recall  f1-score   support
+
+    academic       0.83      0.50      0.62        10
+      family       0.67      0.67      0.67         6
+   financial       0.75      0.43      0.55         7
+      health       0.50      0.44      0.47         9
+        none       0.80      0.67      0.73         6
+relationship       0.83      0.83      0.83         6
+ self_esteem       0.50      0.78      0.61         9
+      social       0.67      0.75      0.71         8
+        work       0.50      0.67      0.57         9
+
+    accuracy                           0.63        70
+   macro avg       0.67      0.64      0.64        70
+weighted avg       0.66      0.63      0.63        70

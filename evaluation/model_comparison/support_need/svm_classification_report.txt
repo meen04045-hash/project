@@ -1,0 +1,15 @@
+Task: support_need
+Model: SVM
+
+                precision    recall  f1-score   support
+
+        advice       0.71      0.71      0.71         7
+       calming       0.62      0.62      0.62         8
+crisis_support       0.50      0.71      0.59         7
+ encouragement       0.86      0.75      0.80         8
+   information       1.00      0.83      0.91         6
+      listener       1.00      0.83      0.91         6
+
+      accuracy                           0.74        42
+     macro avg       0.78      0.75      0.76        42
+  weighted avg       0.77      0.74      0.75        42

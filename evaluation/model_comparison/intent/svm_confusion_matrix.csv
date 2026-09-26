@@ -1,0 +1,8 @@
+﻿,ask_advice,assessment,crisis_help,emotional_support,information,smalltalk,venting
+ask_advice,6,0,0,0,0,0,0
+assessment,1,4,0,0,0,0,0
+crisis_help,0,0,6,0,0,0,1
+emotional_support,1,0,0,5,0,0,0
+information,1,0,0,0,2,0,0
+smalltalk,1,0,0,0,0,3,1
+venting,0,0,0,0,0,2,4

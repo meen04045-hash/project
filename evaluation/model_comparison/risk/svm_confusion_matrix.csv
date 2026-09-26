@@ -1,0 +1,9 @@
+﻿,depression,normal,risk_immediate_danger,risk_passive,risk_self_harm,risk_suicidal_ideation,risk_suicide_plan,stress
+depression,11,1,0,11,0,1,2,5
+normal,1,28,2,0,0,0,0,2
+risk_immediate_danger,0,3,17,1,1,0,4,0
+risk_passive,6,1,3,20,0,8,1,0
+risk_self_harm,0,0,0,1,25,0,0,0
+risk_suicidal_ideation,2,1,2,8,2,13,0,0
+risk_suicide_plan,0,4,2,0,0,0,20,0
+stress,3,1,0,2,0,0,0,28

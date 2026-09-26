@@ -32,20 +32,20 @@ confused: 40
 ----------------------------------------
 
 Problem Dataset
-Total Samples: 289
+Total Samples: 349
 Number of Labels: 9
 Missing Values: 0
 Duplicate Rows: 0
 Label Distribution:
+academic: 49
 self_esteem: 45
-academic: 37
+health: 43
+work: 42
+social: 42
 financial: 36
-health: 31
-work: 30
+none: 32
 relationship: 30
 family: 30
-social: 30
-none: 20
 
 ----------------------------------------
 
