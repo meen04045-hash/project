@@ -1,0 +1,8 @@
+﻿Task,Model,Class,Precision,Recall,F1,Support
+intent,Random Forest,ask_advice,0.625,0.8333333333333334,0.7142857142857143,6.0
+intent,Random Forest,assessment,1.0,0.6,0.75,5.0
+intent,Random Forest,crisis_help,0.6666666666666666,0.8571428571428571,0.75,7.0
+intent,Random Forest,emotional_support,1.0,0.6666666666666666,0.8,6.0
+intent,Random Forest,information,1.0,0.3333333333333333,0.5,3.0
+intent,Random Forest,smalltalk,0.4,0.8,0.5333333333333333,5.0
+intent,Random Forest,venting,0.6666666666666666,0.3333333333333333,0.4444444444444444,6.0

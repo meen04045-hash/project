@@ -1,0 +1,8 @@
+﻿Task,Model,Class,Precision,Recall,F1,Support
+emotion,Logistic Regression,angry,0.8333333333333334,0.625,0.7142857142857143,8.0
+emotion,Logistic Regression,confused,0.6,0.375,0.46153846153846156,8.0
+emotion,Logistic Regression,fear,1.0,0.75,0.8571428571428571,8.0
+emotion,Logistic Regression,happy,0.7,0.7,0.7,10.0
+emotion,Logistic Regression,neutral,1.0,0.8888888888888888,0.9411764705882353,9.0
+emotion,Logistic Regression,sad,0.46153846153846156,0.46153846153846156,0.46153846153846156,13.0
+emotion,Logistic Regression,tired,0.5263157894736842,0.9090909090909091,0.6666666666666666,11.0

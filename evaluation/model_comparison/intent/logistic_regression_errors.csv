@@ -1,0 +1,10 @@
+﻿Task,Model,Text,True_Label,Predicted_Label
+intent,Logistic Regression,มีวิธีดูแลสุขภาพจิตไหม,information,ask_advice
+intent,Logistic Regression,ช่วยทดสอบหน่อย,assessment,ask_advice
+intent,Logistic Regression,กำลังร้องไห้หนักมาก,crisis_help,venting
+intent,Logistic Regression,หวัดดี,smalltalk,ask_advice
+intent,Logistic Regression,ไม่รู้จะเล่าให้ใครฟัง,venting,crisis_help
+intent,Logistic Regression,ขอคุยเล่นหน่อย,smalltalk,venting
+intent,Logistic Regression,ช่วยอยู่เป็นเพื่อนหน่อย,venting,smalltalk
+intent,Logistic Regression,ช่วยฮีลใจหน่อย,emotional_support,ask_advice
+intent,Logistic Regression,วันนี้เหนื่อยมากจริงๆ,venting,smalltalk

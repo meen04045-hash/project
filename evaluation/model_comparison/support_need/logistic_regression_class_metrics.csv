@@ -1,0 +1,7 @@
+﻿Task,Model,Class,Precision,Recall,F1,Support
+support_need,Logistic Regression,advice,0.625,0.7142857142857143,0.6666666666666666,7.0
+support_need,Logistic Regression,calming,0.625,0.625,0.625,8.0
+support_need,Logistic Regression,crisis_support,0.5714285714285714,0.5714285714285714,0.5714285714285714,7.0
+support_need,Logistic Regression,encouragement,0.8571428571428571,0.75,0.8,8.0
+support_need,Logistic Regression,information,1.0,0.6666666666666666,0.8,6.0
+support_need,Logistic Regression,listener,0.75,1.0,0.8571428571428571,6.0

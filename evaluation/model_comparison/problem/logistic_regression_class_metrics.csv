@@ -1,0 +1,10 @@
+﻿Task,Model,Class,Precision,Recall,F1,Support
+problem,Logistic Regression,academic,0.8333333333333334,0.5,0.625,10.0
+problem,Logistic Regression,family,0.6666666666666666,0.6666666666666666,0.6666666666666666,6.0
+problem,Logistic Regression,financial,0.75,0.42857142857142855,0.5454545454545454,7.0
+problem,Logistic Regression,health,0.5,0.4444444444444444,0.47058823529411764,9.0
+problem,Logistic Regression,none,0.8,0.6666666666666666,0.7272727272727273,6.0
+problem,Logistic Regression,relationship,0.8333333333333334,0.8333333333333334,0.8333333333333334,6.0
+problem,Logistic Regression,self_esteem,0.5,0.7777777777777778,0.6086956521739131,9.0
+problem,Logistic Regression,social,0.6666666666666666,0.75,0.7058823529411765,8.0
+problem,Logistic Regression,work,0.5,0.6666666666666666,0.5714285714285714,9.0

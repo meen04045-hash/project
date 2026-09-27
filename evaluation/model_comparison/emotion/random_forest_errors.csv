@@ -1,0 +1,26 @@
+﻿Task,Model,Text,True_Label,Predicted_Label
+emotion,Random Forest,น้ำตาไหลเองตลอด,sad,happy
+emotion,Random Forest,เหมือนถูกทิ้ง,sad,happy
+emotion,Random Forest,ไม่ไหวกับอะไรแบบนี้แล้ว,angry,tired
+emotion,Random Forest,รู้สึกตื่นกลัว,fear,sad
+emotion,Random Forest,วันนี้ต้องแวะธนาคารก่อนบ่ายสาม,neutral,happy
+emotion,Random Forest,รู้สึกโชคดี,happy,sad
+emotion,Random Forest,น้ำตาไหลออกมาเองโดยไม่รู้ตัว,sad,happy
+emotion,Random Forest,มีแรงทำอะไรหลายอย่าง,happy,tired
+emotion,Random Forest,อยากอยู่เงียบๆ,sad,angry
+emotion,Random Forest,ใจฟูมาก,happy,sad
+emotion,Random Forest,เหนื่อยใจกับชีวิต,tired,happy
+emotion,Random Forest,คิดอะไรไม่ออก,confused,tired
+emotion,Random Forest,ทุกอย่างน่ารำคาญไปหมด,angry,tired
+emotion,Random Forest,ใจมันตีกันไปหมด,confused,sad
+emotion,Random Forest,เหมือนชีวิตไม่มีสี,sad,tired
+emotion,Random Forest,เหมือนยืนอยู่กลางทางแยก,confused,happy
+emotion,Random Forest,ไม่รู้ว่าควรทำยังไงต่อ,sad,confused
+emotion,Random Forest,วันนี้มีนัดส่งมอบงานตอนสี่โมง,neutral,happy
+emotion,Random Forest,วันนี้อากาศดี,neutral,happy
+emotion,Random Forest,ใจหวิวๆ,fear,sad
+emotion,Random Forest,เหมือนชีวิตไร้ทิศทาง,confused,happy
+emotion,Random Forest,รู้สึกฉุนเฉียวมาก,angry,sad
+emotion,Random Forest,มึนไปหมด,confused,tired
+emotion,Random Forest,ใจสั่นตลอดเวลา,fear,happy
+emotion,Random Forest,ไม่มีแรงยิ้ม,sad,tired

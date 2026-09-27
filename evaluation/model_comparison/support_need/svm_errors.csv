@@ -1,0 +1,12 @@
+﻿Task,Model,Text,True_Label,Predicted_Label
+support_need,SVM,อยากได้พลังบวก,encouragement,advice
+support_need,SVM,อยากคุยกับใครสักคน,listener,crisis_support
+support_need,SVM,กำลังร้องไห้หนักมาก,crisis_support,calming
+support_need,SVM,อยากได้คำปลอบใจ,encouragement,advice
+support_need,SVM,อยากจัดการอารมณ์ตัวเอง,advice,crisis_support
+support_need,SVM,อยากหยุดความฟุ้งซ่าน,calming,crisis_support
+support_need,SVM,ช่วยให้เราปลอดภัยหน่อย,crisis_support,calming
+support_need,SVM,รู้สึกควบคุมตัวเองไม่ได้,calming,crisis_support
+support_need,SVM,เหงื่อแตกทั้งที่ไม่ได้ร้อน,calming,crisis_support
+support_need,SVM,ช่วยคิดหน่อยได้ไหม,advice,encouragement
+support_need,SVM,ทำไมถึงนอนไม่หลับเวลาเครียด,information,calming

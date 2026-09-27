@@ -1,0 +1,8 @@
+﻿Task,Model,Class,Precision,Recall,F1,Support
+emotion,Random Forest,angry,0.8333333333333334,0.625,0.7142857142857143,8.0
+emotion,Random Forest,confused,0.75,0.375,0.5,8.0
+emotion,Random Forest,fear,1.0,0.625,0.7692307692307693,8.0
+emotion,Random Forest,happy,0.4117647058823529,0.7,0.5185185185185185,10.0
+emotion,Random Forest,neutral,1.0,0.6666666666666666,0.8,9.0
+emotion,Random Forest,sad,0.5,0.46153846153846156,0.48,13.0
+emotion,Random Forest,tired,0.5882352941176471,0.9090909090909091,0.7142857142857143,11.0

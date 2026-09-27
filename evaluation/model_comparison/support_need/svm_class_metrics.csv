@@ -1,0 +1,7 @@
+﻿Task,Model,Class,Precision,Recall,F1,Support
+support_need,SVM,advice,0.7142857142857143,0.7142857142857143,0.7142857142857143,7.0
+support_need,SVM,calming,0.625,0.625,0.625,8.0
+support_need,SVM,crisis_support,0.5,0.7142857142857143,0.5882352941176471,7.0
+support_need,SVM,encouragement,0.8571428571428571,0.75,0.8,8.0
+support_need,SVM,information,1.0,0.8333333333333334,0.9090909090909091,6.0
+support_need,SVM,listener,1.0,0.8333333333333334,0.9090909090909091,6.0

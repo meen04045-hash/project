@@ -1,0 +1,10 @@
+﻿Task,Model,Class,Precision,Recall,F1,Support
+problem,Random Forest,academic,0.35,0.7,0.4666666666666667,10.0
+problem,Random Forest,family,0.8,0.6666666666666666,0.7272727272727273,6.0
+problem,Random Forest,financial,0.5,0.2857142857142857,0.36363636363636365,7.0
+problem,Random Forest,health,1.0,0.3333333333333333,0.5,9.0
+problem,Random Forest,none,1.0,0.5,0.6666666666666666,6.0
+problem,Random Forest,relationship,1.0,0.6666666666666666,0.8,6.0
+problem,Random Forest,self_esteem,0.4666666666666667,0.7777777777777778,0.5833333333333334,9.0
+problem,Random Forest,social,0.6666666666666666,0.75,0.7058823529411765,8.0
+problem,Random Forest,work,0.5714285714285714,0.4444444444444444,0.5,9.0

@@ -1,0 +1,9 @@
+﻿Task,Model,Text,True_Label,Predicted_Label
+intent,SVM,มีวิธีดูแลสุขภาพจิตไหม,information,ask_advice
+intent,SVM,ช่วยทดสอบหน่อย,assessment,ask_advice
+intent,SVM,กำลังร้องไห้หนักมาก,crisis_help,venting
+intent,SVM,หวัดดี,smalltalk,ask_advice
+intent,SVM,ขอคุยเล่นหน่อย,smalltalk,venting
+intent,SVM,ช่วยอยู่เป็นเพื่อนหน่อย,venting,smalltalk
+intent,SVM,ช่วยฮีลใจหน่อย,emotional_support,ask_advice
+intent,SVM,วันนี้เหนื่อยมากจริงๆ,venting,smalltalk

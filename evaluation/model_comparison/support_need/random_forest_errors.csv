@@ -1,0 +1,21 @@
+﻿Task,Model,Text,True_Label,Predicted_Label
+support_need,Random Forest,อยากได้พลังบวก,encouragement,advice
+support_need,Random Forest,กำลังร้องไห้หนักมาก,crisis_support,calming
+support_need,Random Forest,อยากรู้ว่าควรเลือกอะไร,advice,information
+support_need,Random Forest,อยากได้คำปลอบใจ,encouragement,advice
+support_need,Random Forest,อยากจัดการอารมณ์ตัวเอง,advice,crisis_support
+support_need,Random Forest,อยากพูดออกมาบ้าง,listener,calming
+support_need,Random Forest,อาการ burnout เป็นแบบไหน,information,calming
+support_need,Random Forest,บอกเราทีว่าเรายังไม่แพ้,encouragement,calming
+support_need,Random Forest,อยากระบาย,listener,calming
+support_need,Random Forest,อยากระบายความรู้สึก,listener,calming
+support_need,Random Forest,อยากรู้สึกมีแรงฮึดสู้ต่ออีกครั้ง,encouragement,calming
+support_need,Random Forest,ช่วยให้เราปลอดภัยหน่อย,crisis_support,calming
+support_need,Random Forest,ความวิตกกังวลรักษาได้ไหม,information,listener
+support_need,Random Forest,อยากได้คนปลอบใจ,encouragement,advice
+support_need,Random Forest,รู้สึกควบคุมตัวเองไม่ได้,calming,crisis_support
+support_need,Random Forest,ตอนนี้ต้องการความช่วยเหลือมาก,crisis_support,calming
+support_need,Random Forest,เหงื่อแตกทั้งที่ไม่ได้ร้อน,calming,crisis_support
+support_need,Random Forest,ช่วยคิดหน่อยได้ไหม,advice,encouragement
+support_need,Random Forest,ขอเบอร์ติดต่อฉุกเฉินหน่อยตอนนี้เลย,crisis_support,encouragement
+support_need,Random Forest,ทำไมถึงนอนไม่หลับเวลาเครียด,information,calming

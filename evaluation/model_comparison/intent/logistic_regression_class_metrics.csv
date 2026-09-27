@@ -1,0 +1,8 @@
+﻿Task,Model,Class,Precision,Recall,F1,Support
+intent,Logistic Regression,ask_advice,0.6,1.0,0.75,6.0
+intent,Logistic Regression,assessment,1.0,0.8,0.8888888888888888,5.0
+intent,Logistic Regression,crisis_help,0.8571428571428571,0.8571428571428571,0.8571428571428571,7.0
+intent,Logistic Regression,emotional_support,1.0,0.8333333333333334,0.9090909090909091,6.0
+intent,Logistic Regression,information,1.0,0.6666666666666666,0.8,3.0
+intent,Logistic Regression,smalltalk,0.6,0.6,0.6,5.0
+intent,Logistic Regression,venting,0.6,0.5,0.5454545454545454,6.0

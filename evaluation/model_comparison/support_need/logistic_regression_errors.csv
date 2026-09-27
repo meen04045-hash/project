@@ -1,0 +1,13 @@
+﻿Task,Model,Text,True_Label,Predicted_Label
+support_need,Logistic Regression,อยากได้พลังบวก,encouragement,advice
+support_need,Logistic Regression,กำลังร้องไห้หนักมาก,crisis_support,calming
+support_need,Logistic Regression,อยากได้คำปลอบใจ,encouragement,advice
+support_need,Logistic Regression,อยากจัดการอารมณ์ตัวเอง,advice,crisis_support
+support_need,Logistic Regression,อยากหยุดความฟุ้งซ่าน,calming,listener
+support_need,Logistic Regression,ช่วยให้เราปลอดภัยหน่อย,crisis_support,calming
+support_need,Logistic Regression,การดูแลตัวเองทางใจทำยังไง,information,advice
+support_need,Logistic Regression,รู้สึกควบคุมตัวเองไม่ได้,calming,crisis_support
+support_need,Logistic Regression,เหงื่อแตกทั้งที่ไม่ได้ร้อน,calming,crisis_support
+support_need,Logistic Regression,ช่วยคิดหน่อยได้ไหม,advice,listener
+support_need,Logistic Regression,ขอเบอร์ติดต่อฉุกเฉินหน่อยตอนนี้เลย,crisis_support,encouragement
+support_need,Logistic Regression,ทำไมถึงนอนไม่หลับเวลาเครียด,information,calming

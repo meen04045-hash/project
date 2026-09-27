@@ -1,0 +1,27 @@
+﻿Task,Model,Text,True_Label,Predicted_Label
+problem,Logistic Regression,ทะเลาะกับพี่น้อง,family,relationship
+problem,Logistic Regression,รู้สึกโดดเดี่ยวในที่ทำงาน,work,family
+problem,Logistic Regression,กังวลเรื่องสุขภาพ,health,financial
+problem,Logistic Regression,รู้สึกไม่สบายและกังวลเกี่ยวกับสุขภาพของตัวเอง,health,self_esteem
+problem,Logistic Regression,รู้สึกเหงามาก,social,self_esteem
+problem,Logistic Regression,เครียดกับโปรเจกต์ที่รับผิดชอบ,work,academic
+problem,Logistic Regression,เงินเดือน,financial,work
+problem,Logistic Regression,ไม่กล้าสบตาใคร,self_esteem,social
+problem,Logistic Regression,เพลงนี้เพราะจัง,none,health
+problem,Logistic Regression,การบ้านกองเต็มไปหมด,academic,work
+problem,Logistic Regression,กังวลเรื่องผลงานของตัวเองในที่ทำงาน,work,self_esteem
+problem,Logistic Regression,เรียนหนักจนเหนื่อย,academic,health
+problem,Logistic Regression,รู้สึกไม่มีแรงตลอดเวลา,health,self_esteem
+problem,Logistic Regression,ต้องประหยัดทุกอย่าง,financial,social
+problem,Logistic Regression,งานวิชาที่อาจารย์สั่งเยอะจนจัดการไม่ไหว,academic,work
+problem,Logistic Regression,เงินเดือนหมดเร็วมาก,financial,work
+problem,Logistic Regression,ความรักทำให้เหนื่อยมาก,relationship,health
+problem,Logistic Regression,เรียนกับงานไปพร้อมกันไม่ไหว,academic,work
+problem,Logistic Regression,งานกลุ่มมีปัญหา,academic,work
+problem,Logistic Regression,รู้สึกเป็นภาระของครอบครัว,family,self_esteem
+problem,Logistic Regression,กลัวตัวเองป่วยหนัก,health,self_esteem
+problem,Logistic Regression,แมวที่บ้านน่ารักมาก,none,family
+problem,Logistic Regression,กินข้าวไม่ลง,health,none
+problem,Logistic Regression,ไม่กล้าพูดในที่ประชุมเพราะกลัวคนอื่นมองไม่ดี,social,self_esteem
+problem,Logistic Regression,ค่ารถ,financial,health
+problem,Logistic Regression,ไม่กล้าตัดสินใจ,self_esteem,social

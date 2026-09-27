@@ -1,0 +1,8 @@
+﻿Task,Model,Class,Precision,Recall,F1,Support
+intent,SVM,ask_advice,0.6,1.0,0.75,6.0
+intent,SVM,assessment,1.0,0.8,0.8888888888888888,5.0
+intent,SVM,crisis_help,1.0,0.8571428571428571,0.9230769230769231,7.0
+intent,SVM,emotional_support,1.0,0.8333333333333334,0.9090909090909091,6.0
+intent,SVM,information,1.0,0.6666666666666666,0.8,3.0
+intent,SVM,smalltalk,0.6,0.6,0.6,5.0
+intent,SVM,venting,0.6666666666666666,0.6666666666666666,0.6666666666666666,6.0

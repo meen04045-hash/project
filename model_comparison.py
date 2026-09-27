@@ -39,9 +39,12 @@ import numpy as np
 import pandas as pd
 
 from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.model_selection import train_test_split, StratifiedKFold, cross_val_score
+from sklearn.model_selection import (
+    train_test_split,
+    StratifiedKFold,
+    cross_validate
+)
 from sklearn.pipeline import Pipeline
-from sklearn.preprocessing import LabelEncoder
 
 from sklearn.svm import LinearSVC
 from sklearn.calibration import CalibratedClassifierCV
@@ -139,11 +142,8 @@ def create_vectorizer():
     return TfidfVectorizer(
         tokenizer=tokenize,
         token_pattern=None,
-
         ngram_range=(1, 3),
-
         min_df=1,
-
         sublinear_tf=True
     )
 
@@ -199,9 +199,7 @@ def load_dataset(path):
     df = pd.read_csv(path)
 
     print("\nDataset:", path)
-
     print("Columns:", list(df.columns))
-
     print("Dataset Size:", len(df))
 
     return df
@@ -292,7 +290,9 @@ def train_model(
 
     print("=" * 70)
 
+    # --------------------------------------------------------
     # Create Pipeline
+    # --------------------------------------------------------
 
     pipeline = Pipeline([
 
@@ -399,6 +399,13 @@ def train_model(
         zero_division=0
     )
 
+    report_dict = classification_report(
+        y_test,
+        y_pred,
+        output_dict=True,
+        zero_division=0
+    )
+
     # --------------------------------------------------------
     # Confusion Matrix
     # --------------------------------------------------------
@@ -418,7 +425,7 @@ def train_model(
     )
 
     # --------------------------------------------------------
-    # Save Classification Report
+    # Create Task Output Directory
     # --------------------------------------------------------
 
     task_dir = os.path.join(
@@ -436,6 +443,118 @@ def train_model(
         .lower()
         .replace(" ", "_")
     )
+
+    # ========================================================
+    # SAVE PER-CLASS METRICS
+    # ========================================================
+
+    excluded_rows = {
+        "accuracy",
+        "macro avg",
+        "weighted avg",
+        "micro avg"
+    }
+
+    class_metrics = [
+        {
+            "Task": task_name,
+            "Model": model_name,
+            "Class": class_name,
+            "Precision": values["precision"],
+            "Recall": values["recall"],
+            "F1": values["f1-score"],
+            "Support": values["support"]
+        }
+        for class_name, values in report_dict.items()
+        if (
+            class_name not in excluded_rows
+            and isinstance(values, dict)
+            and "f1-score" in values
+        )
+    ]
+
+    class_metrics_path = os.path.join(
+        task_dir,
+        f"{safe_model_name}_class_metrics.csv"
+    )
+
+    pd.DataFrame(
+        class_metrics,
+        columns=[
+            "Task",
+            "Model",
+            "Class",
+            "Precision",
+            "Recall",
+            "F1",
+            "Support"
+        ]
+    ).to_csv(
+        class_metrics_path,
+        index=False,
+        encoding="utf-8-sig"
+    )
+
+    # ========================================================
+    # ERROR ANALYSIS
+    # ========================================================
+
+    y_test_values = y_test.to_numpy()
+
+    y_pred_values = np.asarray(
+        y_pred
+    )
+
+    error_mask = (
+        y_test_values
+        !=
+        y_pred_values
+    )
+
+    error_positions = np.flatnonzero(
+        error_mask
+    )
+
+    errors_df = pd.DataFrame({
+
+        "Task": task_name,
+
+        "Model": model_name,
+
+        "Text": X_test.iloc[
+            error_positions
+        ].to_numpy(),
+
+        "True_Label": y_test_values[
+            error_mask
+        ],
+
+        "Predicted_Label": y_pred_values[
+            error_mask
+        ]
+
+    }, columns=[
+        "Task",
+        "Model",
+        "Text",
+        "True_Label",
+        "Predicted_Label"
+    ])
+
+    errors_path = os.path.join(
+        task_dir,
+        f"{safe_model_name}_errors.csv"
+    )
+
+    errors_df.to_csv(
+        errors_path,
+        index=False,
+        encoding="utf-8-sig"
+    )
+
+    # ========================================================
+    # SAVE CLASSIFICATION REPORT
+    # ========================================================
 
     report_path = os.path.join(
         task_dir,
@@ -458,9 +577,9 @@ def train_model(
 
         f.write(report)
 
-    # --------------------------------------------------------
-    # Save Confusion Matrix
-    # --------------------------------------------------------
+    # ========================================================
+    # SAVE CONFUSION MATRIX
+    # ========================================================
 
     cm_df = pd.DataFrame(
         cm,
@@ -478,9 +597,9 @@ def train_model(
         encoding="utf-8-sig"
     )
 
-    # --------------------------------------------------------
-    # Save Model
-    # --------------------------------------------------------
+    # ========================================================
+    # SAVE MODEL
+    # ========================================================
 
     model_path = os.path.join(
         MODEL_DIR,
@@ -492,9 +611,9 @@ def train_model(
         model_path
     )
 
-    # --------------------------------------------------------
-    # Result
-    # --------------------------------------------------------
+    # ========================================================
+    # RESULT
+    # ========================================================
 
     result = {
 
@@ -522,8 +641,29 @@ def train_model(
 
         "Train_Size": len(X_train),
 
-        "Test_Size": len(X_test)
+        "Test_Size": len(X_test),
+
+        "Dataset_Size": (
+            len(X_train)
+            +
+            len(X_test)
+        ),
+
+        "Number_of_Classes": len(
+            set(y_train)
+            |
+            set(y_test)
+        ),
+
+        "Error_Count": int(
+            error_mask.sum()
+        )
+
     }
+
+    # --------------------------------------------------------
+    # Print Results
+    # --------------------------------------------------------
 
     print()
 
@@ -555,6 +695,10 @@ def train_model(
         f"Prediction Time: {prediction_time:.4f}s"
     )
 
+    print(
+        f"Errors         : {error_mask.sum()}"
+    )
+
     return result
 
 
@@ -575,6 +719,10 @@ def run_cross_validation(
         f"{task_name} - {model_name}"
     )
 
+    # --------------------------------------------------------
+    # Pipeline
+    # --------------------------------------------------------
+
     pipeline = Pipeline([
 
         (
@@ -588,6 +736,10 @@ def run_cross_validation(
         )
     ])
 
+    # --------------------------------------------------------
+    # Stratified K-Fold
+    # --------------------------------------------------------
+
     cv = StratifiedKFold(
 
         n_splits=N_SPLITS,
@@ -597,9 +749,35 @@ def run_cross_validation(
         random_state=RANDOM_STATE
     )
 
+    # --------------------------------------------------------
+    # Scoring
+    # --------------------------------------------------------
+
+    scoring = {
+
+        "accuracy":
+            "accuracy",
+
+        "precision_macro":
+            "precision_macro",
+
+        "recall_macro":
+            "recall_macro",
+
+        "f1_macro":
+            "f1_macro",
+
+        "f1_weighted":
+            "f1_weighted"
+    }
+
+    # --------------------------------------------------------
+    # Run CV
+    # --------------------------------------------------------
+
     start = time.perf_counter()
 
-    scores = cross_val_score(
+    scores = cross_validate(
 
         pipeline,
 
@@ -609,47 +787,172 @@ def run_cross_validation(
 
         cv=cv,
 
-        scoring="accuracy",
+        scoring=scoring,
+
+        return_train_score=False,
 
         n_jobs=1
     )
 
     elapsed = (
         time.perf_counter()
-        - start
+        -
+        start
     )
+
+    # --------------------------------------------------------
+    # Result
+    # --------------------------------------------------------
 
     result = {
 
-        "Task": task_name,
+        "Task":
+            task_name,
 
-        "Model": model_name,
+        "Model":
+            model_name,
 
-        "CV_Mean_Accuracy": scores.mean(),
+        # Accuracy
+        "CV_Accuracy_Mean":
+            scores[
+                "test_accuracy"
+            ].mean(),
 
-        "CV_Std": scores.std(),
+        "CV_Accuracy_Std":
+            scores[
+                "test_accuracy"
+            ].std(),
 
-        "CV_Fold_1": scores[0],
+        # Precision
+        "CV_Precision_Macro_Mean":
+            scores[
+                "test_precision_macro"
+            ].mean(),
 
-        "CV_Fold_2": scores[1],
+        "CV_Precision_Macro_Std":
+            scores[
+                "test_precision_macro"
+            ].std(),
 
-        "CV_Fold_3": scores[2],
+        # Recall
+        "CV_Recall_Macro_Mean":
+            scores[
+                "test_recall_macro"
+            ].mean(),
 
-        "CV_Fold_4": scores[3],
+        "CV_Recall_Macro_Std":
+            scores[
+                "test_recall_macro"
+            ].std(),
 
-        "CV_Fold_5": scores[4],
+        # F1 Macro
+        "CV_F1_Macro_Mean":
+            scores[
+                "test_f1_macro"
+            ].mean(),
 
-        "CV_Time_sec": elapsed
+        "CV_F1_Macro_Std":
+            scores[
+                "test_f1_macro"
+            ].std(),
+
+        # F1 Weighted
+        "CV_F1_Weighted_Mean":
+            scores[
+                "test_f1_weighted"
+            ].mean(),
+
+        "CV_F1_Weighted_Std":
+            scores[
+                "test_f1_weighted"
+            ].std(),
+
+        # Keep old-compatible names
+        "CV_Mean_Accuracy":
+            scores[
+                "test_accuracy"
+            ].mean(),
+
+        "CV_Std":
+            scores[
+                "test_accuracy"
+            ].std(),
+
+        # CV Time
+        "CV_Time_sec":
+            elapsed
     }
+
+    # ========================================================
+    # SAVE INDIVIDUAL FOLD RESULTS
+    # ========================================================
+
+    for fold in range(N_SPLITS):
+
+        fold_number = fold + 1
+
+        result[
+            f"Accuracy_Fold_{fold_number}"
+        ] = scores[
+            "test_accuracy"
+        ][fold]
+
+        result[
+            f"Precision_Macro_Fold_{fold_number}"
+        ] = scores[
+            "test_precision_macro"
+        ][fold]
+
+        result[
+            f"Recall_Macro_Fold_{fold_number}"
+        ] = scores[
+            "test_recall_macro"
+        ][fold]
+
+        result[
+            f"F1_Macro_Fold_{fold_number}"
+        ] = scores[
+            "test_f1_macro"
+        ][fold]
+
+        result[
+            f"F1_Weighted_Fold_{fold_number}"
+        ] = scores[
+            "test_f1_weighted"
+        ][fold]
+
+    # --------------------------------------------------------
+    # Print CV Results
+    # --------------------------------------------------------
 
     print(
         f"Mean Accuracy: "
-        f"{scores.mean():.4f}"
+        f"{scores['test_accuracy'].mean():.4f}"
     )
 
     print(
-        f"Std: "
-        f"{scores.std():.4f}"
+        f"Mean Precision Macro: "
+        f"{scores['test_precision_macro'].mean():.4f}"
+    )
+
+    print(
+        f"Mean Recall Macro: "
+        f"{scores['test_recall_macro'].mean():.4f}"
+    )
+
+    print(
+        f"Mean F1 Macro: "
+        f"{scores['test_f1_macro'].mean():.4f}"
+    )
+
+    print(
+        f"Mean F1 Weighted: "
+        f"{scores['test_f1_weighted'].mean():.4f}"
+    )
+
+    print(
+        f"Accuracy Std: "
+        f"{scores['test_accuracy'].std():.4f}"
     )
 
     return result
@@ -674,13 +977,17 @@ def run_task(
 
     print("#" * 80)
 
+    # --------------------------------------------------------
     # Load Dataset
+    # --------------------------------------------------------
 
     df = load_dataset(
         dataset_path
     )
 
-    # Detect columns
+    # --------------------------------------------------------
+    # Detect Columns
+    # --------------------------------------------------------
 
     text_column, label_column = detect_columns(
         df
@@ -696,7 +1003,9 @@ def run_task(
         label_column
     )
 
-    # Remove missing values
+    # --------------------------------------------------------
+    # Remove Missing Values
+    # --------------------------------------------------------
 
     df = df[
         [
@@ -705,17 +1014,25 @@ def run_task(
         ]
     ].dropna()
 
-    # Clean
+    # --------------------------------------------------------
+    # Clean Text
+    # --------------------------------------------------------
 
     df[text_column] = df[
         text_column
     ].apply(clean_text)
 
-    # Remove empty text
+    # --------------------------------------------------------
+    # Remove Empty Text
+    # --------------------------------------------------------
 
     df = df[
         df[text_column] != ""
     ]
+
+    # --------------------------------------------------------
+    # X / Y
+    # --------------------------------------------------------
 
     X = df[
         text_column
@@ -773,10 +1090,14 @@ def run_task(
     cv_results = []
 
     # --------------------------------------------------------
-    # Train each model
+    # Train Each Model
     # --------------------------------------------------------
 
     for model_name, model in models.items():
+
+        # ----------------------------------------------------
+        # Holdout Evaluation
+        # ----------------------------------------------------
 
         result = train_model(
 
@@ -799,7 +1120,9 @@ def run_task(
             result
         )
 
+        # ----------------------------------------------------
         # Cross Validation
+        # ----------------------------------------------------
 
         cv_result = run_cross_validation(
 
@@ -809,9 +1132,9 @@ def run_task(
 
             model,
 
-            X,
+            X_train,
 
-            y
+            y_train
         )
 
         cv_results.append(
@@ -900,7 +1223,7 @@ def main():
     all_cv_results = []
 
     # --------------------------------------------------------
-    # Run all tasks
+    # Run All Tasks
     # --------------------------------------------------------
 
     for task_name, dataset_path in DATASETS.items():
@@ -933,7 +1256,11 @@ def main():
                 f"ERROR in task: {task_name}"
             )
 
-            print(e)
+            print(
+                type(e).__name__,
+                ":",
+                e
+            )
 
             print()
 
@@ -962,7 +1289,7 @@ def main():
     )
 
     # --------------------------------------------------------
-    # Save CV Results
+    # Save Cross Validation Results
     # --------------------------------------------------------
 
     cv_df = pd.DataFrame(
@@ -1078,6 +1405,38 @@ def main():
         )
 
         f.write(
+            "Experimental Configuration:\n"
+        )
+
+        f.write(
+            f"- Random State: {RANDOM_STATE}\n"
+        )
+
+        f.write(
+            f"- Test Size: {TEST_SIZE}\n"
+        )
+
+        f.write(
+            f"- Cross Validation: {N_SPLITS}-Fold Stratified\n"
+        )
+
+        f.write(
+            "- TF-IDF ngram_range: (1, 3)\n"
+        )
+
+        f.write(
+            "- TF-IDF min_df: 1\n"
+        )
+
+        f.write(
+            "- TF-IDF sublinear_tf: True\n"
+        )
+
+        f.write(
+            "- Thai Tokenization: PyThaiNLP newmm\n\n"
+        )
+
+        f.write(
             "Results\n"
         )
 
@@ -1117,13 +1476,32 @@ def main():
 
             "Accuracy",
 
+            "Precision_Macro",
+
+            "Recall_Macro",
+
             "F1_Macro",
 
             "F1_Weighted",
 
-            "CV_Mean_Accuracy",
+            "CV_Accuracy_Mean",
 
-            "CV_Std"
+            "CV_Precision_Macro_Mean",
+
+            "CV_Recall_Macro_Mean",
+
+            "CV_F1_Macro_Mean",
+
+            "CV_F1_Weighted_Mean",
+
+            "CV_Accuracy_Std"
+        ]
+
+        # Only display columns that actually exist
+        display_columns = [
+            column
+            for column in display_columns
+            if column in combined_df.columns
         ]
 
         print(
@@ -1133,6 +1511,18 @@ def main():
                 index=False
             )
         )
+
+    print()
+
+    print(
+        "Total Experiments:",
+        len(combined_df)
+    )
+
+    print(
+        "Expected Experiments:",
+        len(DATASETS) * 3
+    )
 
     print()
 

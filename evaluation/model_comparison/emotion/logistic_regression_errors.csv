@@ -1,0 +1,23 @@
+﻿Task,Model,Text,True_Label,Predicted_Label
+emotion,Logistic Regression,น้ำตาไหลเองตลอด,sad,tired
+emotion,Logistic Regression,ไม่ไหวกับอะไรแบบนี้แล้ว,angry,tired
+emotion,Logistic Regression,รู้สึกตื่นกลัว,fear,sad
+emotion,Logistic Regression,รู้สึกโชคดี,happy,sad
+emotion,Logistic Regression,น้ำตาไหลออกมาเองโดยไม่รู้ตัว,sad,tired
+emotion,Logistic Regression,มีแรงทำอะไรหลายอย่าง,happy,tired
+emotion,Logistic Regression,อยากอยู่เงียบๆ,sad,angry
+emotion,Logistic Regression,ใจฟูมาก,happy,sad
+emotion,Logistic Regression,เหนื่อยใจกับชีวิต,tired,happy
+emotion,Logistic Regression,คิดอะไรไม่ออก,confused,tired
+emotion,Logistic Regression,ทุกอย่างน่ารำคาญไปหมด,angry,tired
+emotion,Logistic Regression,ใจมันตีกันไปหมด,confused,sad
+emotion,Logistic Regression,เหมือนชีวิตไม่มีสี,sad,tired
+emotion,Logistic Regression,เหมือนยืนอยู่กลางทางแยก,confused,sad
+emotion,Logistic Regression,ไม่รู้ว่าควรทำยังไงต่อ,sad,confused
+emotion,Logistic Regression,วันนี้อากาศดี,neutral,happy
+emotion,Logistic Regression,ใจหวิวๆ,fear,sad
+emotion,Logistic Regression,เหมือนชีวิตไร้ทิศทาง,confused,happy
+emotion,Logistic Regression,รู้สึกฉุนเฉียวมาก,angry,sad
+emotion,Logistic Regression,มึนไปหมด,confused,tired
+emotion,Logistic Regression,รู้สึกใจสลายกับสิ่งที่เกิดขึ้น,sad,confused
+emotion,Logistic Regression,ไม่มีแรงยิ้ม,sad,tired

@@ -1,0 +1,8 @@
+﻿Task,Model,Class,Precision,Recall,F1,Support
+conversation_style,SVM,casual,0.8333333333333334,0.8333333333333334,0.8333333333333334,6.0
+conversation_style,SVM,detailed,0.8333333333333334,0.8333333333333334,0.8333333333333334,6.0
+conversation_style,SVM,direct,1.0,0.25,0.4,4.0
+conversation_style,SVM,friendly,0.8571428571428571,0.8571428571428571,0.8571428571428571,7.0
+conversation_style,SVM,gentle,1.0,0.75,0.8571428571428571,4.0
+conversation_style,SVM,motivational,1.0,1.0,1.0,4.0
+conversation_style,SVM,serious,0.6,1.0,0.75,6.0

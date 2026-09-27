@@ -1,0 +1,12 @@
+﻿Task,Model,Text,True_Label,Predicted_Label
+conversation_style,Random Forest,อยากเข้าใจจริงๆ,detailed,casual
+conversation_style,Random Forest,อยากรู้ลึกๆ,detailed,casual
+conversation_style,Random Forest,อยากให้ตอบแบบเป็นกันเองหน่อย,friendly,direct
+conversation_style,Random Forest,ขอความจริงจังในการตอบหน่อยนะ,serious,gentle
+conversation_style,Random Forest,อยากได้ตัวอย่างด้วย,detailed,gentle
+conversation_style,Random Forest,อยากได้แรงฮึบ,motivational,casual
+conversation_style,Random Forest,ขอแบบลงลึก,detailed,direct
+conversation_style,Random Forest,ขอแบบละเอียด,detailed,direct
+conversation_style,Random Forest,อยากหาเพื่อนคุย,casual,friendly
+conversation_style,Random Forest,เอาใจความพอ,direct,casual
+conversation_style,Random Forest,ช่วยกระตุ้นหน่อย,motivational,detailed

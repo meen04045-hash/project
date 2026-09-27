@@ -1,0 +1,8 @@
+﻿Task,Model,Class,Precision,Recall,F1,Support
+conversation_style,Logistic Regression,casual,0.8333333333333334,0.8333333333333334,0.8333333333333334,6.0
+conversation_style,Logistic Regression,detailed,0.75,0.5,0.6,6.0
+conversation_style,Logistic Regression,direct,0.3333333333333333,0.25,0.2857142857142857,4.0
+conversation_style,Logistic Regression,friendly,0.75,0.8571428571428571,0.8,7.0
+conversation_style,Logistic Regression,gentle,1.0,0.75,0.8571428571428571,4.0
+conversation_style,Logistic Regression,motivational,1.0,1.0,1.0,4.0
+conversation_style,Logistic Regression,serious,0.5555555555555556,0.8333333333333334,0.6666666666666666,6.0

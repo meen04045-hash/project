@@ -1,0 +1,8 @@
+﻿Task,Model,Text,True_Label,Predicted_Label
+conversation_style,SVM,พูดกับเราเบาๆหน่อย,gentle,serious
+conversation_style,SVM,อยากให้ตอบแบบเป็นกันเองหน่อย,friendly,serious
+conversation_style,SVM,ไม่ต้องยาว,direct,detailed
+conversation_style,SVM,อยากได้ตัวอย่างด้วย,detailed,serious
+conversation_style,SVM,ตอบเร็วๆได้ไหม,direct,serious
+conversation_style,SVM,อยากหาเพื่อนคุย,casual,friendly
+conversation_style,SVM,เอาใจความพอ,direct,casual
