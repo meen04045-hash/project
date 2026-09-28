@@ -691,7 +691,8 @@
                 </div>
                 <h2 class="result-title">ผลการประเมินความเสี่ยง</h2>
                 <p id="desc-result-high" class="result-desc">
-                    คุณมีความเสี่ยงสูงที่จะมีภาวะซึมเศร้า หรือมีระดับความเสี่ยงในการทำร้ายตนเอง แนะนำให้ปรึกษาแพทย์หรือผู้เชี่ยวชาญทันที
+                    ผลการประเมินพบว่าคุณมีความเสี่ยงด้านสุขภาพจิต
+                    แนะนำให้ปรึกษาแพทย์หรือผู้เชี่ยวชาญเพื่อรับคำแนะนำเพิ่มเติม
                 </p>
                 
                 <div class="score-box">
@@ -782,7 +783,7 @@
             </div>
 
             <div class="btn-footer">
-                <button class="btn-primary" onclick="sendToBot()">
+                <button id="btn-send-to-bot" class="btn-primary" onclick="sendToBot()">
                     ไปที่แชทบอท
                     <i class="fa-brands fa-line"></i>
                 </button>
@@ -793,7 +794,7 @@
 
     <script>
         // LIFF User Variables
-        let userId = null;
+        let liffInitialized = false;
         let finalReport = "";
 
         // Quiz State Variables
@@ -846,14 +847,11 @@
             try {
                 await liff.init({ liffId: "2009909099-QZqLLKsr" });
                 
-                // Fetch User Details securely
-                if (liff.isLoggedIn()) {
-                    const profile = await liff.getProfile();
-                    userId = profile.userId;
-                } else {
+                if (!liff.isLoggedIn()) {
                     liff.login();
                     return;
                 }
+                liffInitialized = true;
 
                 // Automatic transitions after Splash Screen
                 setTimeout(() => {
@@ -862,8 +860,6 @@
 
             } catch (err) {
                 console.error("LIFF Init Error:", err);
-                // Fallback details for mock or external browser execution
-                userId = "test_user_liff";
                 setTimeout(() => {
                     showScreen('view-welcome');
                 }, 2000);
@@ -1063,10 +1059,10 @@
         }
 
         function get8QText(score) {
-            if (score === 0) return "ไม่มีแนวโน้มทำร้ายตนเอง/ฆ่าตัวตาย";
-            if (score <= 8) return "มีแนวโน้มทำร้ายตนเอง/ฆ่าตัวตาย ระดับน้อย";
-            if (score <= 16) return "มีแนวโน้มทำร้ายตนเอง/ฆ่าตัวตาย ระดับปานกลาง";
-            return "มีแนวโน้มทำร้ายตนเอง/ฆ่าตัวตาย ระดับรุนแรง";
+            if (score === 0) return "ระดับน้อยมาก";
+            if (score <= 8) return "ระดับน้อย";
+            if (score <= 16) return "ระดับปานกลาง";
+            return "ระดับรุนแรง";
         }
 
         function generateReport(score9, score8, stepFinished) {
@@ -1074,7 +1070,9 @@
                 // 2Q Normal
                 finalReport = "📋 ผลการประเมินสุขภาพจิตของคุณ\n\n• แบบประเมินคัดกรอง 2Q: ปกติ 😊";
                 document.getElementById('score-val-low').innerText = "ปกติ";
-                document.getElementById('desc-result-low').innerHTML = "ผลการคัดกรอง 2Q ระบุว่าสุขภาพจิตของคุณเป็นปกติ ไม่มีภาวะซึมเศร้าเบื้องต้น";
+                document.getElementById('desc-result-low').innerHTML =
+                    `ผลการประเมิน: <strong>ปกติ</strong><br>` +
+                    `และมีความเสี่ยงด้านสุขภาพจิตอยู่ในระดับน้อยมาก`;                
                 showScreen('view-result-low');
             }
             else if (stepFinished === 9) {
@@ -1095,11 +1093,15 @@
 
                 if (score8 > 0) {
                     document.getElementById('score-val-high').innerText = `${score8} / 44`;
-                    document.getElementById('desc-result-high').innerHTML = `ผลการประเมินพบว่าคุณ <strong>${text8Q}</strong><br>และมีผลประเมินซึมเศร้า: ${text9Q}<br><br><span style="color: var(--danger); font-weight: 600;">แนะนำให้ติดต่อสายด่วน 1323 หรือพบผู้เชี่ยวชาญทันที</span>`;
-                    showScreen('view-result-high');
+                    document.getElementById('desc-result-high').innerHTML =
+                        `ผลการประเมินพบว่าคุณ <strong>มีความเสี่ยงด้านสุขภาพจิต ${text8Q}</strong><br>` +
+                        `และมีผลประเมินซึมเศร้า: <strong>${text9Q}</strong><br><br>` +
+                        `<span style="color: var(--danger); font-weight: 600;">แนะนำให้ติดต่อสายด่วน 1323 หรือพบผู้เชี่ยวชาญทันที</span>`;                    showScreen('view-result-high');
                 } else {
                     document.getElementById('score-val-low').innerText = `9Q: ${score9} | 8Q: 0`;
-                    document.getElementById('desc-result-low').innerHTML = `ผลการประเมิน: <strong>${text9Q}</strong><br>และไม่มีแนวโน้มความเสี่ยงในการทำร้ายตนเอง`;
+                    document.getElementById('desc-result-low').innerHTML =
+                    `ผลการประเมิน: <strong>${text9Q}</strong><br>` +
+                    `และมีความเสี่ยงด้านสุขภาพจิตอยู่ในระดับน้อยมาก`;
                     showScreen('view-result-low');
                 }
             }
@@ -1113,33 +1115,69 @@
         // FETCH & SEND TO BOT
         // =====================================
         function sendToBot() {
-            if (!userId) {
-                alert("ไม่สามารถดึงข้อมูล User ID ได้จาก LINE LIFF");
+            const sendButton = document.getElementById("btn-send-to-bot");
+            if (sendButton.disabled) return;
+            sendButton.disabled = true;
+
+            let idToken = null;
+            if (liffInitialized) {
+                try {
+                    idToken = liff.getIDToken();
+                } catch (_) {}
+            }
+            if (!idToken) {
+                sendButton.disabled = false;
+                alert("ไม่สามารถยืนยันตัวตนกับ LINE ได้ กรุณาเข้าสู่ระบบใหม่");
+                return;
+            }
+
+            if (!finalReport.trim()) {
+                sendButton.disabled = false;
+                alert("ยังไม่มีผลการประเมิน กรุณาทำแบบประเมินให้เสร็จก่อน");
                 return;
             }
 
             // Post result report securely to Flask backend
+            let resultSaved = false;
             fetch("/send", {
                 method: "POST",
                 headers: {
-                    "Content-Type": "application/json"
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${idToken}`
                 },
                 body: JSON.stringify({
-                    userId: userId,
                     score: finalReport
                 })
             })
-            .then(res => {
-                if (res.ok) {
+            .then(async res => {
+                const result = await res.json();
+                if (result.saved === true) {
+                    resultSaved = true;
+                }
+                if (res.ok && result.saved === true && result.pushed === true) {
                     // Close LIFF screen safely
-                    liff.closeWindow();
+                    if (typeof liff !== "undefined" && typeof liff.closeWindow === "function") {
+                        liff.closeWindow();
+                    }
+                } else if (resultSaved) {
+                    alert("บันทึกผลแล้ว แต่ส่ง LINE ไม่สำเร็จ");
+                } else if (res.status === 401) {
+                    sendButton.disabled = false;
+                    alert("ไม่สามารถยืนยันตัวตนกับ LINE ได้ กรุณาเข้าสู่ระบบใหม่");
+                } else if (res.status === 503) {
+                    sendButton.disabled = false;
+                    alert("ไม่สามารถตรวจสอบตัวตนกับ LINE ได้ในขณะนี้ กรุณาลองอีกครั้ง");
                 } else {
-                    alert("เซิร์ฟเวอร์ตอบรับเกิดข้อผิดพลาด กรุณาลองอีกครั้ง");
+                    sendButton.disabled = false;
+                    alert("ไม่สามารถบันทึกผลได้ กรุณาลองอีกครั้ง");
                 }
             })
             .catch(err => {
                 console.error("Fetch error:", err);
-                alert("ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้ในขณะนี้");
+                if (!resultSaved) {
+                    sendButton.disabled = false;
+                    alert("ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้ในขณะนี้");
+                }
             });
         }
     </script>
