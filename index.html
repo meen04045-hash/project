@@ -691,7 +691,8 @@
                 </div>
                 <h2 class="result-title">ผลการประเมินความเสี่ยง</h2>
                 <p id="desc-result-high" class="result-desc">
-                    คุณมีความเสี่ยงสูงที่จะมีภาวะซึมเศร้า หรือมีระดับความเสี่ยงในการทำร้ายตนเอง แนะนำให้ปรึกษาแพทย์หรือผู้เชี่ยวชาญทันที
+                    ผลการประเมินพบว่าคุณมีความเสี่ยงด้านสุขภาพจิต
+                    แนะนำให้ปรึกษาแพทย์หรือผู้เชี่ยวชาญเพื่อรับคำแนะนำเพิ่มเติม
                 </p>
                 
                 <div class="score-box">
@@ -1111,19 +1112,48 @@
 
         const level9Q = get9QLevel(score9);
 
+        // ---------------------------------
+        // Determine 8Q risk level
+        // ---------------------------------
+        let riskLevelText = "";
+
+        if (score8 <= 8) {
+            riskLevelText = "ระดับน้อย";
+        }
+        else if (score8 <= 16) {
+            riskLevelText = "ระดับปานกลาง";
+        }
+        else {
+            riskLevelText = "ระดับรุนแรง";
+        }
+
+        // ---------------------------------
+        // Report sent back to LINE Bot
+        // ---------------------------------
         finalReport =
             `📋 ผลการประเมิน\n\n` +
             `• คะแนน 9Q: ${score9} / 27 คะแนน\n` +
             `• ระดับคะแนน 9Q: ${level9Q}\n` +
-            `• คะแนน 8Q: ${score8} / 44 คะแนน`;
+            `• คะแนน 8Q: ${score8} / 44 คะแนน\n` +
+            `• ระดับความเสี่ยงด้านสุขภาพจิต: ${riskLevelText}`;
 
+        // ---------------------------------
+        // Display score
+        // ---------------------------------
         document.getElementById('score-val-high').innerText =
             `${score8} / 44`;
 
+        // ---------------------------------
+        // Display result
+        // ---------------------------------
         document.getElementById('desc-result-high').innerHTML =
-            `คะแนนแบบประเมิน 9Q: <strong>${score9} / 27</strong><br>` +
-            `ระดับคะแนน 9Q: <strong>${level9Q}</strong><br><br>` +
-            `คะแนนแบบประเมิน 8Q: <strong>${score8} / 44</strong>`;
+            `ผลการประเมินพบว่าคุณ ` +
+            `<strong>มีความเสี่ยงด้านสุขภาพจิต ${riskLevelText}</strong><br>` +
+            `และมีผลประเมินซึมเศร้า: ` +
+            `<strong>${level9Q}</strong><br><br>` +
+            `<span style="color: var(--danger); font-weight: 600;">` +
+            `แนะนำให้ติดต่อสายด่วน 1323 หรือพบผู้เชี่ยวชาญทันที` +
+            `</span>`;
 
         showScreen('view-result-high');
     }

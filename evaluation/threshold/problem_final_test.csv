@@ -1,0 +1,2 @@
+﻿threshold,coverage,accepted,rejected,accuracy,precision_macro,recall_macro,f1_macro,f1_weighted,fp,fn,errors,task,dataset,selected_threshold
+0.75,0.11428571428571428,8,62,1.0,1.0,1.0,1.0,1.0,0,0,0,problem,test,0.75
