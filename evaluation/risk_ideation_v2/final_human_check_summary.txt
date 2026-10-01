@@ -1,0 +1,28 @@
+Final Human Check Validation Summary
+====================================
+Source: evaluation/risk_ideation_v2/final_human_check.csv
+Summary: evaluation/risk_ideation_v2/final_human_check_summary.txt
+
+Validation
+----------
+Total rows: 4
+Human decisions complete: 4/4
+Blank human_decision values: 0
+Values outside KEEP/DROP: 0
+Malformed CSV rows: 0
+
+Human decisions
+---------------
+KEEP: 3
+Original rows: 6, 27, 13
+
+DROP: 1
+Original row: 24
+
+By issue type
+-------------
+near_duplicate: KEEP 2 (rows 6, 27); DROP 0
+label_boundary: KEEP 1 (row 13); DROP 1 (row 24)
+
+This is validation of human-entered decisions only. No decision was added or
+changed, and no dataset was created or modified in this step.

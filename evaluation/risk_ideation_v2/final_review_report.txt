@@ -1,0 +1,81 @@
+Final Reviewed Candidate Report — risk_suicidal_ideation v2
+==========================================================
+
+Human Review completeness
+-------------------------
+Source candidate: dataset/risk_suicidal_ideation_candidate_v2.csv
+Original candidate rows: 33 (CSV rows 2–34)
+Human Review source: evaluation/risk_ideation_v2/human_review_sheet.csv
+Human Review coverage: 33/33; missing or invalid decisions: 0
+Original KEEP: 23
+Original REWRITE: 6
+Original DROP: 4 (rows 8, 22, 28, 30)
+
+Final rewrite decisions in evaluation/risk_ideation_v2/rewrite_candidates.csv:
+Expected/present: 6/6 (rows 9, 12, 14, 16, 18, 34)
+Rewrite KEEP: 6
+Rewrite DROP: 0
+Blank decisions: 0
+Values outside KEEP/DROP: 0
+
+The 33 current candidate rows are covered by audit.csv. That audit also has
+7 earlier REJECT entries without candidate row IDs; these are not in the
+current candidate CSV. Human decisions above come only from the Human Review
+files, not from audit status.
+
+Final dataset
+-------------
+Path: dataset/risk_suicidal_ideation_reviewed_v2.csv
+Final rows: 29 = 23 original KEEP + 6 rewritten KEEP
+Schema: text,label,source,reviewed
+All rows: label=risk_suicidal_ideation; source=ai_generated; reviewed=true
+The source value is preserved from the original candidate. Review provenance
+is recorded here so the four-column training schema remains unchanged.
+No original and rewritten version of the same row are included together.
+
+Rewrite mapping
+---------------
+Original row | Original decision | Final decision | Final use
+9            | REWRITE           | KEEP           | rewritten
+12           | REWRITE           | KEEP           | rewritten
+14           | REWRITE           | KEEP           | rewritten
+16           | REWRITE           | KEEP           | rewritten
+18           | REWRITE           | KEEP           | rewritten
+34           | REWRITE           | KEEP           | rewritten
+
+Integrity and duplicate audit
+-----------------------------
+CSV parsed with the expected four columns; malformed rows: 0
+Missing values in text, label, source, or reviewed: 0
+Duplicate text within final dataset: 0
+Duplicate full rows within final dataset: 0
+Exact text duplicates with dataset/risk.csv: 0
+Exact text duplicates with dataset/risk_augmented_reviewed.csv: 0
+Final label distribution: risk_suicidal_ideation=29
+
+Near-duplicate review aids
+--------------------------
+Method: Jaccard overlap of character trigrams after removing whitespace and
+punctuation; one closest match per final row. A score of at least 0.30 is used
+only to list items for review. It does not determine inclusion or label.
+Rows to inspect against existing data: 2
+- Final CSV row 6 (original row 6): 0.377 vs dataset/risk.csv row 651.
+  The shared phrase concerns suicidal thought; the final text adds the
+  context of appearing normal in front of friends.
+- Final CSV row 25 (original row 27): 0.375 vs dataset/risk.csv row 696.
+  The shared phrase concerns suicidal thought; the final text adds hesitation.
+Internal final-dataset pairs at or above 0.30: 0
+No sample was removed or relabeled using similarity scores.
+
+Label-boundary review flags
+---------------------------
+Flagged rows for human attention: 2
+- Original row 13 (final CSV row 12): the phrase "คิดจริงจัง" may sound close
+  to risk_suicide_plan. The text explicitly says no method has been considered.
+- Original row 24 (final CSV row 22): "เริ่มฟังดูเป็นไปได้" may sound close to
+  risk_suicide_plan. No method, plan, preparation, or imminent action is stated.
+Both rows were marked KEEP in the original Human Review. These are caution
+flags, not label changes. No text clearly states a plan or immediate action;
+the passive-wish contrasts also include explicit self-directed death thoughts.
+
+No training dataset was merged and no model was retrained or overwritten.

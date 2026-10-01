@@ -1,0 +1,38 @@
+Final Human Review Validation Summary
+=====================================
+Source: evaluation/risk_ideation_v2/rewrite_candidates.csv
+Reference: evaluation/risk_ideation_v2/human_review_sheet.csv
+
+Validation result: INCOMPLETE
+-----------------------------
+Expected REWRITE rows from the original Human Review: 6
+Expected rows: 9, 12, 14, 16, 18, 34
+Rows present in rewrite_candidates.csv: 5
+Present rows: 9, 12, 16, 18, 34
+Missing row: 14
+
+Human final decisions are complete for 5 of the 6 expected rows.
+Blank human_final_decision values among present rows: 0
+Values other than KEEP or DROP among present rows: 0
+No decision is inferred for missing row 14. The final review is not complete.
+
+Human final decision counts for present rows
+--------------------------------------------
+KEEP: 5
+Rows: 9, 12, 16, 18, 34
+
+DROP: 0
+Rows: none
+
+KEEP rows with similarity_note other than none
+----------------------------------------------
+Count: 3
+Rows: 12 (risk.csv:651), 16 (risk_augmented_reviewed.csv:43), 34 (risk.csv:684)
+These notes are review aids; they do not change the human decisions.
+
+DROP rows and reasons from the original data
+--------------------------------------------
+None among the present rows. No DROP reason can be reported.
+
+This summary only validates existing human decisions. It does not modify the
+source files or produce a final dataset.

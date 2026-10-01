@@ -1,0 +1,48 @@
+Human Review Validation Summary
+===============================
+Source: evaluation/risk_ideation_v2/human_review_sheet.csv
+
+Validation
+----------
+Total rows: 33
+Human decisions complete: 33/33
+Blank human_decision values: 0
+Values outside KEEP / REWRITE / DROP: 0
+Candidate row numbers: 2-34, unique and complete
+This summary reports the human-entered values only. No decision was added or changed.
+
+Human decision counts and rows
+------------------------------
+KEEP: 23
+Rows: 2, 3, 4, 5, 6, 7, 10, 11, 13, 15, 17, 19, 20, 21, 23, 24, 25, 26, 27, 29, 31, 32, 33
+
+REWRITE: 6
+Rows: 9, 12, 14, 16, 18, 34
+
+DROP: 4
+Rows: 8, 22, 28, 30
+
+Closest competing label distribution
+------------------------------------
+Label                       All  KEEP  REWRITE  DROP
+none                         18    13        4     1
+risk_passive                 11     8        2     1
+risk_suicide_plan             3     2        0     1
+risk_immediate_danger         1     0        0     1
+Total                        33    23        6     4
+
+Follow-up counts
+----------------
+KEEP rows with ambiguity_reason other than clear: 10
+Rows: 2, 5, 11, 13, 20, 23, 24, 25, 26, 29
+
+KEEP rows with similarity_note other than none: 6
+Rows: 3, 6, 21, 23, 24, 27
+
+REWRITE rows requiring further work: 6
+Rows: 9, 12, 14, 16, 18, 34
+
+DROP rows: 4
+Rows: 8, 22, 28, 30
+
+No final dataset or rewritten text was produced in this validation step.

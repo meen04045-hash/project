@@ -1,0 +1,45 @@
+Final Freeze Report — risk_suicidal_ideation v2
+================================================
+
+Sources
+-------
+dataset/risk_suicidal_ideation_reviewed_v2.csv
+evaluation/risk_ideation_v2/final_human_check.csv
+
+Human Decision and freeze counts
+--------------------------------
+Starting reviewed rows: 29
+Final Human Check KEEP: 3 (original rows 6, 27, 13)
+Final Human Check DROP: 1 (original row 24)
+Previously reviewed rows outside the four-row check retained: 25
+Original row removed: 24
+Final rows retained: 28
+Final dataset: dataset/risk_suicidal_ideation_final_v2.csv
+
+Integrity checks
+----------------
+Schema: text,label,source,reviewed
+All 28 rows exactly match retained source rows in their original order.
+All labels: risk_suicidal_ideation
+Missing values: 0
+Malformed CSV rows: 0
+Exact duplicate text within final file: 0
+Exact duplicate full rows within final file: 0
+Exact duplicate text with dataset/risk.csv: 0
+Exact duplicate text with dataset/risk_augmented_reviewed.csv: 0
+Both source-file SHA-256 hashes remained unchanged during freeze.
+
+No training dataset was merged, and no model was retrained or overwritten.
+
+git status --short
+------------------
+ M app.py
+ M templates/index.html
+?? .risk_review_work/
+?? dataset/risk_augmented_candidate.csv
+?? dataset/risk_augmented_reviewed.csv
+?? dataset/risk_suicidal_ideation_candidate_v2.csv
+?? dataset/risk_suicidal_ideation_final_v2.csv
+?? dataset/risk_suicidal_ideation_reviewed_v2.csv
+?? evaluation/risk_augmentation/
+?? evaluation/risk_ideation_v2/
