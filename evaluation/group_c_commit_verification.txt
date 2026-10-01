@@ -1,0 +1,86 @@
+GROUP C COMMIT VERIFICATION
+Date: 2026-10-01 (Asia/Bangkok)
+Scope: local commit and verification of Group C only.
+
+1. SOURCE STAGING REPORT AND PRE-COMMIT CHECK
+Source: evaluation/group_c_staging_verification.txt and the Group C exact
+list in evaluation/final_staging_review.txt. Before committing, the index
+contained exactly 19 unique Group C files. Missing: 0. Extra: 0.
+`git diff --cached --check` returned exit 0 with no whitespace error.
+No file was added to the index after this recheck.
+
+2. COMMIT IDENTITY
+Full hash: 431445cb17c23ee289be77e421245528340bbd7f
+Short hash: 431445c
+Subject: eval: preserve risk experiments and model finalization
+The commit was created locally without amend, squash, or history rewrite.
+
+3. EXACT COMMIT FILES (git diff-tree --no-commit-id --name-only -r HEAD)
+  evaluation/risk_augmentation/augmented_errors.csv
+  evaluation/risk_augmentation/augmented_report.txt
+  evaluation/risk_augmentation/baseline_errors.csv
+  evaluation/risk_augmentation/baseline_report.txt
+  evaluation/risk_augmentation/comparison.txt
+  evaluation/risk_augmentation/run_experiment.py
+  evaluation/risk_augmentation_v2/augmented_v1_errors.csv
+  evaluation/risk_augmentation_v2/augmented_v1_report.txt
+  evaluation/risk_augmentation_v2/augmented_v2_errors.csv
+  evaluation/risk_augmentation_v2/augmented_v2_report.txt
+  evaluation/risk_augmentation_v2/baseline_errors.csv
+  evaluation/risk_augmentation_v2/baseline_report.txt
+  evaluation/risk_augmentation_v2/comparison.txt
+  evaluation/risk_augmentation_v2/persistent_ideation_analysis.txt
+  evaluation/risk_augmentation_v2/persistent_ideation_errors.csv
+  evaluation/risk_augmentation_v2/persistent_ideation_human_review.csv
+  evaluation/risk_augmentation_v2/persistent_ideation_human_review_summary.txt
+  evaluation/risk_augmentation_v2/run_experiment.py
+  evaluation/risk_finalization/risk_model_finalization.txt
+
+Name-status: all 19 files were added. Expected: 19. Actual: 19. Unique: 19.
+Missing Group C files: 0. Unexpected files: 0.
+
+4. COMMITTED EXPERIMENT AND HOLDOUT VERIFICATION
+Read the committed blobs from `HEAD:path` without running experiment code.
+All five individual model reports record the shared 243-row holdout and
+the same SHA-256 recorded in both comparison reports and finalization:
+  6d9a1d38230c1d35f4080fef7309937cc07edd2f9e80c8961a738d4603531d44
+Recorded Accuracy and Macro Precision/Recall/F1 in the five reports match
+the baseline/v1/v2 comparison and freeze evidence:
+  Baseline: 0.728395; 0.735382 / 0.732535 / 0.733245
+  V1:       0.740741; 0.748624 / 0.742837 / 0.742785
+  V2:       0.748971; 0.759120 / 0.749247 / 0.749646
+No model metric was recomputed in this verification.
+
+The committed persistent-error CSV has 10 original
+risk_suicidal_ideation rows predicted as risk_passive by v2. The committed
+Human Review CSV also has 10 rows, retains original_true_label, and records
+POSSIBLE_OTHER_LABEL 9 / AMBIGUOUS 1. No holdout relabel appears in this
+commit. The finalization record uses <PROJECT_ROOT>, describes v2 as an
+EXPERIMENTAL CANDIDATE, and states KEEP CURRENT PRODUCTION MODEL UNCHANGED.
+No model artifact or dataset/risk.csv is in the commit. No training,
+metric recomputation, or production model replacement was performed.
+
+5. HISTORICAL DUPLICATE SNAPSHOTS
+The committed v1 and v2 baseline_errors.csv blobs are byte-identical.
+The committed v1 augmented_errors.csv and v2 augmented_v1_errors.csv blobs
+are byte-identical. They preserve the previously recorded experiment
+snapshots and are not unexplained duplicate files.
+
+6. POST-COMMIT WORKING TREE
+`git diff --name-only` and `git diff --cached --name-only` both returned no
+paths. The index is empty and Group C files have no staged or unstaged
+changes. `git status --short` lists only untracked Group D work, the
+Group A/B/C verification reports, six KEEP LOCAL ONLY files, and
+.risk_review_work/. These remain unstaged. No cleanup was performed.
+
+7. PUSH / DEPLOY / RETRAIN AND BLOCKERS
+Push performed: NO. Deploy performed: NO. Retrain performed: NO.
+Blockers found in this commit verification: 0.
+Final result: GROUP C COMMIT VERIFIED.
+
+CLASSIFICATION OF THIS REPORT
+evaluation/group_c_commit_verification.txt: KEEP FOR GROUP D. It records
+the exact local experiment commit and frozen-evidence check without
+sensitive values. This report is intentionally unstaged. The Group D
+exact file list must be updated explicitly to include it before any later
+Group D staging step.

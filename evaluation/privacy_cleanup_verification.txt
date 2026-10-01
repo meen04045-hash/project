@@ -1,0 +1,188 @@
+FINAL PRIVACY CLEANUP + COMMIT-CANDIDATE REVERIFICATION
+Date: 2026-10-01 (Asia/Bangkok)
+Scope: minimal documentation privacy fix and read-only verification.
+
+1. BASELINE SOURCE AND ORIGINAL BLOCKER
+---------------------------------------
+Reviewed evaluation/final_cleanup_decision_verification.txt before editing.
+Its classification was 48 exact KEEP AND COMMIT files, 6 exact KEEP LOCAL
+ONLY files, 0 DELETE BEFORE COMMIT items, and 2 REVIEW BEFORE DECISION
+items: evaluation/risk_finalization/risk_model_finalization.txt and
+.risk_review_work/. It identified one confirmed privacy blocker.
+
+The blocker was line 5 of risk_model_finalization.txt. The Project root
+field used an absolute Windows profile path, which revealed a local OS
+account name. That field identifies the repository root for the relative
+dataset/evaluation paths recorded later in the document; it is not a
+dataset value, experiment result, or model setting.
+
+2. EXACT SANITIZATION
+---------------------
+Changed only line 5 of risk_model_finalization.txt:
+  Before: Project root: [local absolute Windows user-profile path]
+  After:  Project root: <PROJECT_ROOT> (repository root containing app.py, dataset/, and evaluation/)
+<PROJECT_ROOT> is a location placeholder, not a fabricated filesystem path.
+The later statement that listed paths are relative to the project root
+continues to identify the same files without revealing the local account.
+No other path, record, metric, hash, or conclusion was edited.
+
+3. SEMANTIC BEFORE/AFTER VERIFICATION
+-------------------------------------
+The before/after document has the same line count. A line-by-line comparison
+found exactly one changed line: line 5. Every other line is identical.
+Therefore all train/test row counts, Accuracy/Precision/Recall/F1 figures,
+error counts, test-set and source-file SHA-256 strings, dataset references,
+Human Review counts/decisions, historical dates, and limitations are
+unchanged. V2 remains an EXPERIMENTAL CANDIDATE. The production decision
+still says KEEP CURRENT PRODUCTION MODEL UNCHANGED. This edit does not
+alter or replace any model or dataset.
+
+4. FULL PRIVACY RESCAN SCOPE AND METHOD
+---------------------------------------
+First scanned the 48 exact KEEP AND COMMIT files listed in the baseline
+report plus the sanitized risk_model_finalization.txt: 49 distinct files.
+After creating this report, scanned the same 49 plus this report: 50
+distinct commit candidates. The six KEEP LOCAL ONLY files and
+.risk_review_work/ were excluded; neither was reclassified or staged.
+
+The local static scan checked Windows, macOS, and named Linux home paths;
+the local account identifier; email; Thai mobile-number patterns; full
+LINE user IDs; Bearer/JWT/access-key formats; private-key and service-account
+material; secret assignments; credential-bearing URL/query forms; and
+formal Thai/English personal names. This includes CSV reviewer-note fields.
+The scan reports types, file names, and line numbers only, never full
+secret or sensitive text values. Dataset mental-health sentences without
+an identifying attribute were not counted as PII. Pattern matching cannot
+guarantee detection of every informal name or novel secret format, so a
+human publication review remains sensible for a public repository.
+
+The 49-file preliminary scan found no confirmed identifier or credential.
+One pattern hit at app.py:448 was a false positive: runtime code assigns
+the parsed Authorization value to an id_token variable; it does not embed
+a token value in source. No raw token value was printed or copied here.
+The final 50-file scan result is recorded below after verification.
+
+5. SENSITIVE-DATA RESULT AND REMAINING PRIVACY BLOCKERS
+-------------------------------------------------------
+Confirmed sensitive files among the 50 commit candidates: none found by
+the specified scan. No absolute local profile path, local account name,
+email, phone, full LINE user ID, literal Bearer/JWT/access token, Firebase
+private key, service-account credential, API/access key, secret value,
+credential URL, or formal personal name was detected. The app.py:448
+assignment match is a false positive, not a leaked literal credential.
+Privacy blockers remaining for the commit-candidate set: 0.
+
+6. FINAL CLASSIFICATION CHANGES
+-------------------------------
+evaluation/risk_finalization/risk_model_finalization.txt:
+  REVIEW BEFORE DECISION -> KEEP AND COMMIT. The sole confirmed local-path
+  privacy blocker was removed, semantic verification passed, and no new
+  identifier was detected.
+evaluation/privacy_cleanup_verification.txt:
+  KEEP AND COMMIT. This report records the exact privacy edit, full-scope
+  rescan, and revised allowlist without including a sensitive value.
+.risk_review_work/:
+  remains REVIEW BEFORE DECISION. It is still untracked and unstaged.
+  No traversal, edit, ignore-rule change, staging, or deletion of that
+  reparse/cloud directory occurred in this round. Its target/deletion
+  behavior remains unresolved.
+
+7. UPDATED EXACT KEEP AND COMMIT LIST — 50 FILES, NOT STAGED
+-----------------------------------------------------------
+Application code (3):
+  ai_model.py
+  app.py
+  templates/index.html
+Experimental dataset provenance (5):
+  dataset/risk_augmented_candidate.csv
+  dataset/risk_augmented_reviewed.csv
+  dataset/risk_suicidal_ideation_candidate_v2.csv
+  dataset/risk_suicidal_ideation_reviewed_v2.csv
+  dataset/risk_suicidal_ideation_final_v2.csv
+Root evaluation evidence (14):
+  evaluation/application_security_cleanup.txt
+  evaluation/cli_input_logging_cleanup.txt
+  evaluation/client_authoritative_assessment_analysis.txt
+  evaluation/end_to_end_verification.txt
+  evaluation/final_must_fix_closure_verification.txt
+  evaluation/final_system_audit.txt
+  evaluation/model_startup_safety_fix.txt
+  evaluation/safety_negation_analysis.txt
+  evaluation/safety_negation_fix.txt
+  evaluation/safety_negation_final_fix.txt
+  evaluation/server_authoritative_assessment_fix.txt
+  evaluation/user_state_cleanup.txt
+  evaluation/final_cleanup_decision_verification.txt
+  evaluation/privacy_cleanup_verification.txt
+V1 experiment (6):
+  evaluation/risk_augmentation/run_experiment.py
+  evaluation/risk_augmentation/comparison.txt
+  evaluation/risk_augmentation/baseline_report.txt
+  evaluation/risk_augmentation/augmented_report.txt
+  evaluation/risk_augmentation/baseline_errors.csv
+  evaluation/risk_augmentation/augmented_errors.csv
+V2 experiment (12):
+  evaluation/risk_augmentation_v2/run_experiment.py
+  evaluation/risk_augmentation_v2/comparison.txt
+  evaluation/risk_augmentation_v2/baseline_report.txt
+  evaluation/risk_augmentation_v2/augmented_v1_report.txt
+  evaluation/risk_augmentation_v2/augmented_v2_report.txt
+  evaluation/risk_augmentation_v2/baseline_errors.csv
+  evaluation/risk_augmentation_v2/augmented_v1_errors.csv
+  evaluation/risk_augmentation_v2/augmented_v2_errors.csv
+  evaluation/risk_augmentation_v2/persistent_ideation_analysis.txt
+  evaluation/risk_augmentation_v2/persistent_ideation_errors.csv
+  evaluation/risk_augmentation_v2/persistent_ideation_human_review.csv
+  evaluation/risk_augmentation_v2/persistent_ideation_human_review_summary.txt
+Risk model finalization (1):
+  evaluation/risk_finalization/risk_model_finalization.txt
+Ideation v2 audit and decisions (9):
+  evaluation/risk_ideation_v2/audit.csv
+  evaluation/risk_ideation_v2/human_review_sheet.csv
+  evaluation/risk_ideation_v2/human_review_summary.txt
+  evaluation/risk_ideation_v2/rewrite_candidates.csv
+  evaluation/risk_ideation_v2/rewrite_review_summary.txt
+  evaluation/risk_ideation_v2/final_review_report.txt
+  evaluation/risk_ideation_v2/final_human_check.csv
+  evaluation/risk_ideation_v2/final_human_check_summary.txt
+  evaluation/risk_ideation_v2/final_freeze_report.txt
+
+8. UPDATED KEEP LOCAL ONLY LIST — 6 FILES
+-----------------------------------------
+  evaluation/render_deployment_readiness.txt
+  evaluation/should_fix_triage.txt
+  evaluation/risk_ideation_v2/row14_recovery_report.txt
+  evaluation/manual_real_service_e2e.txt
+  evaluation/risk_ideation_v2/review_queue.md
+  evaluation/final_working_tree_cleanup_plan.txt
+These remain untracked local files. No content or Human Review value was
+changed in this round.
+
+9. REMAINING REVIEW / DELETE ITEMS
+----------------------------------
+REVIEW BEFORE DECISION (1 logical item): .risk_review_work/ only.
+DELETE BEFORE COMMIT (0): no file or directory is currently established
+as safe to delete. Never stage .risk_review_work/ or its dependencies.
+
+10. RECOMPUTED COUNTS AND CHANGED FILES
+---------------------------------------
+The baseline had 56 logical items: 48 KEEP AND COMMIT, 6 KEEP LOCAL ONLY,
+0 DELETE BEFORE COMMIT, 2 REVIEW BEFORE DECISION. One existing report moved
+from REVIEW to KEEP; this new report adds one KEEP item. The resulting
+57 logical items are 50 KEEP AND COMMIT + 6 KEEP LOCAL ONLY + 0 DELETE
+BEFORE COMMIT + 1 REVIEW BEFORE DECISION. The temporary reparse directory
+is counted once, not by the number of its dependency files.
+
+Files changed in this round:
+  evaluation/risk_finalization/risk_model_finalization.txt — one-line
+  project-root privacy sanitization.
+  evaluation/privacy_cleanup_verification.txt — new verification report.
+No code, dataset, model, previous evaluation, or .gitignore file was
+changed. No model was retrained. No stage, commit, push, or deploy occurred.
+
+FINAL 50-FILE RESCAN: no confirmed privacy blocker.
+KEEP AND COMMIT: 50
+KEEP LOCAL ONLY: 6
+DELETE BEFORE COMMIT: 0
+REVIEW BEFORE DECISION: 1 (.risk_review_work/)
+PRIVACY BLOCKERS REMAINING: 0

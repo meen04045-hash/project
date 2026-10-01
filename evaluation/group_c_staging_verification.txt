@@ -1,0 +1,99 @@
+GROUP C CONTROLLED STAGING VERIFICATION
+Date: 2026-10-01 (Asia/Bangkok)
+Scope: stage and verify Group C only; no commit, push, deploy, retrain, or cleanup.
+
+1. SOURCE PLAN AND PREFLIGHT
+Source: evaluation/final_staging_review.txt, Group C; checked against
+evaluation/group_b_commit_verification.txt and current Git status. The
+Group C section contains exactly the 19 paths below. All existed as files;
+the index was empty before staging. One `git add --` command named each
+path explicitly. It completed successfully. Git issued LF-to-CRLF
+working-copy warnings for six files; these were not staging failures.
+
+2. EXACT STAGED FILES / CACHED NAME-ONLY RESULT
+  evaluation/risk_augmentation/augmented_errors.csv
+  evaluation/risk_augmentation/augmented_report.txt
+  evaluation/risk_augmentation/baseline_errors.csv
+  evaluation/risk_augmentation/baseline_report.txt
+  evaluation/risk_augmentation/comparison.txt
+  evaluation/risk_augmentation/run_experiment.py
+  evaluation/risk_augmentation_v2/augmented_v1_errors.csv
+  evaluation/risk_augmentation_v2/augmented_v1_report.txt
+  evaluation/risk_augmentation_v2/augmented_v2_errors.csv
+  evaluation/risk_augmentation_v2/augmented_v2_report.txt
+  evaluation/risk_augmentation_v2/baseline_errors.csv
+  evaluation/risk_augmentation_v2/baseline_report.txt
+  evaluation/risk_augmentation_v2/comparison.txt
+  evaluation/risk_augmentation_v2/persistent_ideation_analysis.txt
+  evaluation/risk_augmentation_v2/persistent_ideation_errors.csv
+  evaluation/risk_augmentation_v2/persistent_ideation_human_review.csv
+  evaluation/risk_augmentation_v2/persistent_ideation_human_review_summary.txt
+  evaluation/risk_augmentation_v2/run_experiment.py
+  evaluation/risk_finalization/risk_model_finalization.txt
+
+3. CACHED NAME-STATUS RESULT
+All 19 paths listed in section 2 have status A (added). Expected staged
+count: 19. Actual staged count: 19. Unique: 19. Missing Group C paths: 0.
+Unexpected staged paths: 0.
+
+4. STAGED EXPERIMENT / FREEZE CONTENT
+Read all 19 staged Git blobs and confirmed each matches its current
+working-tree file after Git's normal line-ending conversion. The five
+baseline/v1/v2 model reports all record the same fixed 243-row holdout and
+the same shared test-set SHA-256:
+  6d9a1d38230c1d35f4080fef7309937cc07edd2f9e80c8961a738d4603531d44
+Both comparison reports and the finalization record carry this hash. The
+v2 comparison says baseline/v1 metrics and wrong-row predictions matched
+the prior experiment. Error-row counts are baseline 66, v1 63, v2 61.
+The saved overall metrics in the five individual reports match the two
+experiment comparison reports and finalization record:
+  Baseline: Accuracy 0.728395; Macro P/R/F1 0.735382/0.732535/0.733245
+  V1:       Accuracy 0.740741; Macro P/R/F1 0.748624/0.742837/0.742785
+  V2:       Accuracy 0.748971; Macro P/R/F1 0.759120/0.749247/0.749646
+This compares recorded figures only; no metric was recomputed or model run.
+
+The 10 persistent ideation-to-passive error rows and 10 internal Human
+Review rows remain historical evaluation evidence. All persistent error
+rows have original true label risk_suicidal_ideation and v2 prediction
+risk_passive. The Human Review retains that original true label and has
+POSSIBLE_OTHER_LABEL 9 / AMBIGUOUS 1. No holdout label was changed.
+risk_model_finalization.txt uses <PROJECT_ROOT>, contains no absolute
+Windows user-profile path, retains V2 as EXPERIMENTAL CANDIDATE, and states
+KEEP CURRENT PRODUCTION MODEL UNCHANGED. No model artifact or dataset/risk.csv
+was staged. No retraining, metric recomputation, or production replacement
+was performed.
+
+5. HISTORICAL DUPLICATES AND FILE FREEZE HASHES
+Staged baseline_errors.csv in v1 and v2 are byte-identical. Staged v1
+augmented_errors.csv and v2 augmented_v1_errors.csv are byte-identical.
+These are intentional experiment snapshots, not unexpected duplicates.
+The present working-file SHA-256 values for dataset/risk.csv, reviewed v1,
+final ideation v2, v2 comparison.txt, and persistent Human Review CSV all
+match the five values in risk_model_finalization.txt. The fixed holdout
+hash recorded by the reports also matches that record. Git may normalize
+line endings in the index, so raw Git-blob byte hashes for some files differ
+from recorded working-file SHA-256 values; the staged Git blobs were checked
+against working files using `git hash-object --path` and match.
+
+6. PRIVACY / SECRET SPOT CHECK
+Used evaluation/privacy_cleanup_verification.txt as the prior full-scope
+review. Read-only pattern checks of all 19 staged blobs found no obvious
+absolute local profile path, email, Thai mobile number, full LINE user ID,
+literal JWT/Bearer/access key, private-key marker, credential URL, or
+quoted secret assignment. No sensitive value was printed. The check is
+pattern-based and cannot guarantee every possible identifier is absent.
+
+7. DIFF CHECK, EXCLUSIONS, AND RESULT
+`git diff --cached --check`: PASS, exit 0, no whitespace error/output.
+Exact index reconciliation found no Group D file, Group A/B staging or
+commit verification report, KEEP LOCAL ONLY file, temp/recovery file,
+.risk_review_work/ path, production model artifact, or original risk.csv.
+Unexpected staged files: 0. Blockers before a Group C commit: none found.
+Final result: READY TO COMMIT GROUP C.
+This is staging readiness only; no commit, push, or deployment was done.
+
+CLASSIFICATION OF THIS REPORT
+evaluation/group_c_staging_verification.txt: KEEP FOR GROUP D. It records
+the controlled Group C index and evidence review without sensitive values
+and is intentionally unstaged. The Group D exact list must explicitly add
+this report before any later Group D staging step.

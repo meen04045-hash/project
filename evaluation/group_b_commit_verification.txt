@@ -1,0 +1,71 @@
+GROUP B COMMIT VERIFICATION
+Date: 2026-10-01 (Asia/Bangkok)
+Scope: local commit and verification of Group B only.
+
+1. SOURCE STAGING REPORT AND PRE-COMMIT CHECK
+Source: evaluation/group_b_staging_verification.txt and the Group B exact
+list in evaluation/final_staging_review.txt. Before committing, the index
+contained exactly 14 unique Group B files. Missing: 0. Extra: 0.
+`git diff --cached --check` returned exit 0 with no whitespace error.
+No file was added to the index after this recheck.
+
+2. COMMIT IDENTITY
+Full hash: a3498d61a6c2c21e2cf6dd86c6cdec66cfc682c1
+Short hash: a3498d6
+Subject: data: record reviewed risk augmentation and ideation v2
+The commit was created locally without amend, squash, or history rewrite.
+
+3. EXACT COMMIT FILES (git diff-tree --no-commit-id --name-only -r HEAD)
+  dataset/risk_augmented_candidate.csv
+  dataset/risk_augmented_reviewed.csv
+  dataset/risk_suicidal_ideation_candidate_v2.csv
+  dataset/risk_suicidal_ideation_final_v2.csv
+  dataset/risk_suicidal_ideation_reviewed_v2.csv
+  evaluation/risk_ideation_v2/audit.csv
+  evaluation/risk_ideation_v2/final_freeze_report.txt
+  evaluation/risk_ideation_v2/final_human_check.csv
+  evaluation/risk_ideation_v2/final_human_check_summary.txt
+  evaluation/risk_ideation_v2/final_review_report.txt
+  evaluation/risk_ideation_v2/human_review_sheet.csv
+  evaluation/risk_ideation_v2/human_review_summary.txt
+  evaluation/risk_ideation_v2/rewrite_candidates.csv
+  evaluation/risk_ideation_v2/rewrite_review_summary.txt
+
+Name-status: all 14 files were added. Expected: 14. Actual: 14. Unique: 14.
+Missing Group B files: 0. Unexpected files: 0.
+
+4. COMMITTED DATA AND PROVENANCE CHECK
+Read CSV content from `HEAD:path` (the committed blobs), with strict CSV
+parsing and consistent column widths. Candidate v2 has 33 rows; reviewed
+v2 has 29; final v2 has 28. Original Human Review decisions cover all 33
+rows: KEEP 23, REWRITE 6, DROP 4. All six REWRITE rows have final decision
+KEEP. Final Human Check covers rows 6, 27, 13, and 24: KEEP 3, DROP 1.
+Row 24 is the DROP and is absent from final v2. Reviewed v2 matches the
+23 original KEEP texts plus six approved rewrites; final v2 matches that
+sequence after removing row 24. No unexplained row addition/deletion or
+malformed CSV row was found. All final v2 labels are
+risk_suicidal_ideation, and every final reviewed value is true.
+
+The commit file list contains no production model artifact, dataset/risk.csv,
+or holdout/test file. No dataset merge, retraining, or metric recomputation
+was performed. The earlier Group B staging report records the privacy and
+exact-duplicate checks; this commit contains the same reviewed content.
+
+5. POST-COMMIT WORKING TREE
+`git diff --name-only` and `git diff --cached --name-only` both returned no
+paths. The index is empty and Group B files have no staged or unstaged
+changes. `git status --short` shows only untracked next-round Group C/D
+files and reports, six KEEP LOCAL ONLY files, and .risk_review_work/.
+The Group A/B staging and commit verification reports remain unstaged.
+No cleanup was performed.
+
+6. PUSH / DEPLOY / RETRAIN AND BLOCKERS
+Push performed: NO. Deploy performed: NO. Retrain performed: NO.
+Blockers found in this commit verification: 0.
+Final result: GROUP B COMMIT VERIFIED.
+
+CLASSIFICATION OF THIS REPORT
+evaluation/group_b_commit_verification.txt: KEEP FOR GROUP D. It records
+the exact local commit and provenance check without sensitive values. This
+report is intentionally unstaged. The Group D exact file list must be
+updated explicitly to include it before any later Group D staging step.

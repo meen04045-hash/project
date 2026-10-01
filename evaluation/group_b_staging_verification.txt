@@ -1,0 +1,105 @@
+GROUP B CONTROLLED STAGING VERIFICATION
+Date: 2026-10-01 (Asia/Bangkok)
+Scope: stage and verify Group B only; no commit, push, deploy, retrain, or cleanup.
+
+1. SOURCE PLAN AND PREFLIGHT
+Source: evaluation/final_staging_review.txt, Group B; checked against
+evaluation/group_a_commit_verification.txt and current Git status. The
+Group B section contains exactly the 14 paths below. All existed as files;
+the index was empty before staging. One `git add --` command named each
+path explicitly. It completed successfully. Git emitted LF-to-CRLF
+working-copy warnings for eight files; these were not staging failures.
+
+2. EXACT STAGED FILES / CACHED NAME-ONLY RESULT
+  dataset/risk_augmented_candidate.csv
+  dataset/risk_augmented_reviewed.csv
+  dataset/risk_suicidal_ideation_candidate_v2.csv
+  dataset/risk_suicidal_ideation_final_v2.csv
+  dataset/risk_suicidal_ideation_reviewed_v2.csv
+  evaluation/risk_ideation_v2/audit.csv
+  evaluation/risk_ideation_v2/final_freeze_report.txt
+  evaluation/risk_ideation_v2/final_human_check.csv
+  evaluation/risk_ideation_v2/final_human_check_summary.txt
+  evaluation/risk_ideation_v2/final_review_report.txt
+  evaluation/risk_ideation_v2/human_review_sheet.csv
+  evaluation/risk_ideation_v2/human_review_summary.txt
+  evaluation/risk_ideation_v2/rewrite_candidates.csv
+  evaluation/risk_ideation_v2/rewrite_review_summary.txt
+
+3. CACHED NAME-STATUS RESULT
+  A  dataset/risk_augmented_candidate.csv
+  A  dataset/risk_augmented_reviewed.csv
+  A  dataset/risk_suicidal_ideation_candidate_v2.csv
+  A  dataset/risk_suicidal_ideation_final_v2.csv
+  A  dataset/risk_suicidal_ideation_reviewed_v2.csv
+  A  evaluation/risk_ideation_v2/audit.csv
+  A  evaluation/risk_ideation_v2/final_freeze_report.txt
+  A  evaluation/risk_ideation_v2/final_human_check.csv
+  A  evaluation/risk_ideation_v2/final_human_check_summary.txt
+  A  evaluation/risk_ideation_v2/final_review_report.txt
+  A  evaluation/risk_ideation_v2/human_review_sheet.csv
+  A  evaluation/risk_ideation_v2/human_review_summary.txt
+  A  evaluation/risk_ideation_v2/rewrite_candidates.csv
+  A  evaluation/risk_ideation_v2/rewrite_review_summary.txt
+
+Expected staged count: 14. Actual staged count: 14. Unique: 14.
+Missing Group B paths: 0. Unexpected staged paths: 0.
+
+4. DATASET AND HUMAN-REVIEW PROVENANCE
+Read all 14 staged Git blobs, not only the working copies. Each staged blob
+matched its working-tree file after Git's normal line-ending conversion.
+All staged CSVs parsed with their expected column counts and no malformed
+row widths. Row counts: risk augmented candidate 100, augmented reviewed
+73, ideation candidate v2 33, ideation reviewed v2 29, ideation final v2
+28, audit 40, human review sheet 33, rewrite candidates 6, final human
+check 4. The audit covers all 33 current candidate row IDs; its seven
+other historical audit entries are outside the current candidate CSV.
+
+Original Human Review decisions: KEEP 23, REWRITE 6, DROP 4, covering all
+33 candidate rows. Human-review original text and label match candidate
+rows. The six rewrite rows match the original REWRITE row IDs and original
+texts; all six have human_final_decision=KEEP. The reviewed v2 dataset is
+exactly 23 original KEEP texts plus six approved rewritten texts, in the
+candidate order. Final Human Check covers original rows 6, 27, 13, 24:
+KEEP 3, DROP 1 (row 24). Check texts and labels match the reviewed data.
+The frozen final dataset exactly equals the reviewed v2 rows except row 24,
+preserving order and content. All 28 final rows are nonempty, have label
+risk_suicidal_ideation and reviewed=true. Exact duplicate text counts:
+within final 0, against dataset/risk.csv 0, against reviewed v1 0.
+
+The staged rewrite_review_summary.txt is historical evidence from before
+row 14 was restored and therefore says that review was incomplete at that
+earlier point. The staged rewrite_candidates.csv now contains row 14 with
+a completed human decision; final_review_report.txt and final_freeze_report.txt
+record the subsequent completed state. This historical sequence is not a
+current provenance mismatch. No row addition/deletion outside the recorded
+human decisions was found. No metric was recomputed and no model was trained.
+
+5. PRIVACY / SECRET SPOT CHECK
+Used evaluation/privacy_cleanup_verification.txt as the prior full-scope
+review. A read-only scan of the 14 staged blobs found no obvious absolute
+local profile path, email, Thai mobile number, full LINE user ID, JWT or
+Bearer/access-key literal, private-key marker, credential URL, quoted
+secret assignment, or service-account material. No value was printed.
+This is a pattern spot check, not a guarantee about every possible personal
+identifier; the prior privacy report found no confirmed blocker.
+
+6. STAGED DIFF CHECK AND EXCLUSIONS
+`git diff --cached --check`: PASS, exit 0, no whitespace error/output.
+`git diff --cached --name-only` reconciles exactly with Group B. No
+production model artifact, dataset/risk.csv, holdout/test file, Group C/D
+file, Group A staging/commit verification report, KEEP LOCAL ONLY file,
+temp/recovery file, or .risk_review_work/ path is staged. Group C/D and
+local-only items remain unstaged. The Group A commit remains unchanged.
+
+7. BLOCKERS AND RESULT
+Unexpected staged files: 0. Blockers before a Group B commit: none found
+in the index, provenance, freeze, duplicate, privacy spot, or whitespace
+checks. Final result: READY TO COMMIT GROUP B.
+This is staging readiness only; no commit, push, or deployment was done.
+
+CLASSIFICATION OF THIS REPORT
+evaluation/group_b_staging_verification.txt: KEEP FOR GROUP D. It records
+the controlled Group B evidence check without sensitive values and is
+intentionally unstaged. The Group D exact list must explicitly add this
+report before any later Group D staging action.

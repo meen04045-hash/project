@@ -1,0 +1,106 @@
+GROUP A CONTROLLED STAGING VERIFICATION
+Date: 2026-10-01 (Asia/Bangkok)
+Scope: stage and verify Group A only; no commit, push, deploy, retrain, or file cleanup.
+
+1. SOURCE PLAN AND PREFLIGHT
+Source: evaluation/final_staging_review.txt, Group A (14 explicit paths),
+cross-checked against evaluation/privacy_cleanup_verification.txt and the
+current Git status. All 14 paths existed, matched the 50-file allowlist,
+and the Git index was empty before staging. Staging used one git add --
+command naming each path explicitly. Git emitted LF-to-CRLF working-copy
+warnings only; git add completed successfully.
+
+2. EXACT STAGED FILES / CACHED NAME-ONLY RESULT
+  ai_model.py
+  app.py
+  evaluation/application_security_cleanup.txt
+  evaluation/cli_input_logging_cleanup.txt
+  evaluation/client_authoritative_assessment_analysis.txt
+  evaluation/end_to_end_verification.txt
+  evaluation/final_must_fix_closure_verification.txt
+  evaluation/model_startup_safety_fix.txt
+  evaluation/safety_negation_analysis.txt
+  evaluation/safety_negation_final_fix.txt
+  evaluation/safety_negation_fix.txt
+  evaluation/server_authoritative_assessment_fix.txt
+  evaluation/user_state_cleanup.txt
+  templates/index.html
+
+3. CACHED NAME-STATUS RESULT
+  M  ai_model.py
+  M  app.py
+  A  evaluation/application_security_cleanup.txt
+  A  evaluation/cli_input_logging_cleanup.txt
+  A  evaluation/client_authoritative_assessment_analysis.txt
+  A  evaluation/end_to_end_verification.txt
+  A  evaluation/final_must_fix_closure_verification.txt
+  A  evaluation/model_startup_safety_fix.txt
+  A  evaluation/safety_negation_analysis.txt
+  A  evaluation/safety_negation_final_fix.txt
+  A  evaluation/safety_negation_fix.txt
+  A  evaluation/server_authoritative_assessment_fix.txt
+  A  evaluation/user_state_cleanup.txt
+  M  templates/index.html
+
+Expected staged count: 14. Actual staged count: 14. Unique: 14.
+Missing Group A paths: 0. Unexpected staged paths: 0.
+
+4. PRODUCTION-CODE STAGED DIFF REVIEW
+Reviewed complete `git diff --cached -- ai_model.py app.py templates/index.html`.
+- ai_model.py: get_model(force_train=False) requires both artifacts and fails
+  clearly on missing/load failure without automatic training; force_train=True
+  still reaches the explicit training path. CLI prediction output no longer
+  echoes raw input. No model configuration or predict_all() change.
+- app.py: structured answers are validated and the assessment result is
+  generated on the server; /send retains verified LINE sub identity and
+  existing save/push partial-success responses. Sensitive exception/result
+  console output was reduced. The explicit safety helper handles narrow
+  clear negation while retaining conservative mixed matches. Only unused
+  per-user user_state storage was removed. No unexplained policy, threshold,
+  ML inference, or response-text change appeared in the staged diff.
+- templates/index.html: LIFF initialization failure shows an error view and
+  retry reload; /send sends structured answers. Existing getIDToken(), Bearer
+  header, button duplicate-click guard, and saved/failed button behavior
+  remain in the surrounding code. Fetch error logging is generic.
+All staged production-code hunks match the authorized application fixes
+recorded in the source plan. External LINE/Firestore service behavior was
+not retested by this staging review.
+
+5. EVALUATION EVIDENCE VERIFICATION
+All 11 Group A evaluation reports are present as added files in the index.
+For each report, the staged Git blob hash matches the current working-tree
+blob hash after Git's normal line-ending conversion; each file is nonempty
+and has the expected subject heading. This confirms the exact report files
+reviewed in the source plan are staged, with no additional report staged.
+Subjects: application security cleanup; CLI input logging; client-authoritative
+assessment analysis; local/mock end-to-end verification; final MUST-FIX
+closure; model startup safety; safety negation analysis, first fix, and final
+fix; server-authoritative assessment fix; unused user_state cleanup.
+
+6. STAGED DIFF CHECK AND EXCLUSIONS
+`git diff --cached --check`: PASS, exit 0, no whitespace error/output.
+The LF-to-CRLF warnings from git add were not diff-check failures.
+Exact index comparison found no Group B/C/D file, no KEEP LOCAL ONLY file,
+and no .risk_review_work/ path staged. The six excluded local-only paths
+remain outside the index:
+  evaluation/render_deployment_readiness.txt
+  evaluation/should_fix_triage.txt
+  evaluation/risk_ideation_v2/row14_recovery_report.txt
+  evaluation/manual_real_service_e2e.txt
+  evaluation/risk_ideation_v2/review_queue.md
+  evaluation/final_working_tree_cleanup_plan.txt
+Group B/C/D and .risk_review_work/ remain untracked/unstaged. There are no
+unstaged changes to the three tracked Group A code files after staging.
+
+7. BLOCKERS AND RESULT
+Unexpected staged files: 0. Blockers before a Group A commit: none found
+in this controlled index, diff, evidence, and whitespace review.
+Final result: READY TO COMMIT GROUP A. This is a staging readiness result;
+no commit, push, or deployment was performed.
+
+CLASSIFICATION OF THIS REPORT
+evaluation/group_a_staging_verification.txt: KEEP FOR GROUP D. It records
+the controlled Group A index review and should accompany the final audit
+evidence if Group D is later approved. It is new and intentionally unstaged
+in this round; the Group D file list would need an explicit update before
+that later staging step.

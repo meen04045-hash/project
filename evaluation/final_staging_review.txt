@@ -1,0 +1,221 @@
+FINAL STAGING REVIEW AND COMMIT GROUP PLAN — READ ONLY
+Date: 2026-10-01 (Asia/Bangkok)
+No file was staged, committed, pushed, deployed, deleted, moved, or renamed.
+Only this new planning report was created; no code, data, model, or existing
+report was edited. Suggested Git commands below are future actions only.
+
+1. SOURCE REPORTS AND STATUS REVIEWED
+-------------------------------------
+- evaluation/privacy_cleanup_verification.txt: exact 50-file KEEP AND COMMIT
+  allowlist, six KEEP LOCAL ONLY files, and .risk_review_work/ as the sole
+  REVIEW BEFORE DECISION item; confirmed privacy blockers = 0.
+- evaluation/final_cleanup_decision_verification.txt: preceding 48-file
+  classification, exclusion rationale, and reparse-point caution.
+- Current git status, full working-tree diff of ai_model.py, app.py, and
+  templates/index.html, cached-diff names, scoped source/config status, and
+  relevant application-fix reports.
+
+2. EXACT 50-FILE ALLOWLIST AND EXCLUSION VERIFICATION
+-----------------------------------------------------
+Parsed the 50 file names from section 7 of privacy_cleanup_verification.txt;
+none was invented from the working tree. There are 50 unique exact paths,
+all exist, and all match their current Git status: three tracked modified
+production files plus 47 untracked dataset/evaluation files. No allowlist
+path is missing or has a status mismatch. The six KEEP LOCAL ONLY files are
+untracked and outside the allowlist; no other untracked dataset/evaluation
+file was found outside those two sets. The Git index has no staged files.
+
+Explicit exclusions from every future commit group:
+  evaluation/render_deployment_readiness.txt
+  evaluation/should_fix_triage.txt
+  evaluation/risk_ideation_v2/row14_recovery_report.txt
+  evaluation/manual_real_service_e2e.txt
+  evaluation/risk_ideation_v2/review_queue.md
+  evaluation/final_working_tree_cleanup_plan.txt
+  .risk_review_work/
+The last item is an untracked reparse directory; its target/deletion
+behavior remains unresolved. Do not stage it or use a broad staging command.
+
+3. COMPLETE PRODUCTION-CODE DIFF REVIEW
+---------------------------------------
+ai_model.py — all current diff hunks:
+- get_model(force_train=False) checks both serialized artifacts, loads them
+  when present, and raises a clear missing/load error instead of implicitly
+  retraining or overwriting artifacts. The explicit force_train path and
+  train_all_models() remain. This matches the model-startup MUST FIX report.
+- display_prediction() prints a generic input-received line instead of the
+  raw CLI input. predict_all(), labels, confidence output, and return
+  behavior remain. This matches S-09 and cli_input_logging_cleanup.txt.
+
+app.py — all current diff hunks:
+- Adds `re` solely for detect_explicit_safety(). The helper replaces simple
+  substring matching with a narrow clear-negation exclusion while keeping
+  mixed/ambiguous matches conservative. The final condition remains
+  explicit_safety OR risk_is_high OR intent_is_crisis; thresholds, ML calls,
+  reply text, and high-risk labels are unchanged. This matches the safety
+  negation analysis/fix/final-fix reports.
+- Adds validate_assessment_answers() for exact structured 2Q/9Q/8Q answer
+  shape, ranges, and transition consistency; adds build_assessment_result()
+  so the server generates the result. /send rejects malformed answers with
+  400 before token verification/save/push. The existing Bearer ID-token
+  verification still uses the LINE verified `sub` as user_id, and the
+  save-then-push JSON partial-success contract remains. This matches the
+  server-authoritative assessment fix/closure reports. No assessment UX or
+  frozen scoring threshold change was found in the diff.
+- Save/push/chat-log exception diagnostics print exception class names
+  rather than raw exception objects. Removes raw prediction and safety
+  debug printing. This matches application_security_cleanup.txt.
+- Removes only the write-only process-level user_state declaration,
+  membership/init, and emotion/problem assignments. Local prediction
+  variables, chat_logs payload, response branches, and LINE reply path
+  remain. This matches user_state_cleanup.txt.
+
+templates/index.html — all current diff hunks:
+- Adds a LIFF initialization error view with a reload button. The init
+  failure branch now shows this view rather than the assessment welcome
+  screen and logs a generic failure. This matches the LIFF failure work.
+- Tracks completedAssessmentStep when generateReport() finishes, then sends
+  structured answers_2q/answers_9q/answers_8q to /send instead of a
+  client-generated score string. The existing result display remains.
+  This matches the server-authoritative assessment fix.
+- Keeps liff.getIDToken(), Authorization: Bearer, same-origin /send,
+  immediate send-button disable, no repeat while in flight, re-enable on
+  failed/unsaved responses, and no re-enable after saved=true. The success
+  branch still guards liff.closeWindow(). The fetch catch now logs a
+  generic message instead of the raw error object.
+
+Every current hunk maps to a previously authorized fix or its evidence
+report. No unexplained/unrelated production-code hunk was found. This is
+review of the current working-tree diff, not an assertion that the remote
+deployment or external services have been tested.
+
+4. ACCIDENTAL SOURCE CHANGE AND SECURITY CHECK
+-----------------------------------------------
+`git diff --check -- ai_model.py app.py templates/index.html` returned exit 0
+with no whitespace errors. Git issued only LF-to-CRLF working-copy notices
+for ai_model.py and templates/index.html; these are not diff-check errors.
+Scoped git status found no change in models/, dataset/risk.csv,
+requirements.txt, runtime.txt, .gitignore, .env, or serviceAccountKey.json.
+The latter two are not Git-tracked; their contents were not opened.
+Read-only pattern checks of production source, experiment scripts, and
+runtime/config files found no obvious literal private key, access token,
+credential-bearing URL, or absolute user-profile path. The previous full
+50-file privacy scan found no confirmed blocker. The LIFF ID in source is
+public configuration, not a credential. No new security/privacy blocker
+was identified by this targeted check.
+
+5. PROPOSED COMMIT ORDER AND EXACT GROUPS
+-----------------------------------------
+Future staging must name files explicitly. Do not use `git add .`,
+directory-wide staging, wildcards, or any staging command in this round.
+The four groups below partition the original 50-file allowlist, and Group D
+also contains this new report. Suggested messages are proposals only.
+
+GROUP A — APPLICATION FIXES (14 files; code + application evidence)
+Reason: ship the reviewed production changes and their local/mock evidence
+as one coherent application/security change. No dependency on B or C.
+Suggested message: fix: harden model startup, assessment and safety paths
+  ai_model.py
+  app.py
+  templates/index.html
+  evaluation/application_security_cleanup.txt
+  evaluation/cli_input_logging_cleanup.txt
+  evaluation/client_authoritative_assessment_analysis.txt
+  evaluation/end_to_end_verification.txt
+  evaluation/final_must_fix_closure_verification.txt
+  evaluation/model_startup_safety_fix.txt
+  evaluation/safety_negation_analysis.txt
+  evaluation/safety_negation_fix.txt
+  evaluation/safety_negation_final_fix.txt
+  evaluation/server_authoritative_assessment_fix.txt
+  evaluation/user_state_cleanup.txt
+
+GROUP B — RISK DATA AND HUMAN REVIEW PROVENANCE (14 files; data + evidence)
+Reason: record generated/reviewed candidates and the human decisions that
+produced the frozen 28-row v2 dataset. Independent of A. Group C requires
+these dataset inputs and their provenance to be present first.
+Suggested message: data: record reviewed risk augmentation and ideation v2
+  dataset/risk_augmented_candidate.csv
+  dataset/risk_augmented_reviewed.csv
+  dataset/risk_suicidal_ideation_candidate_v2.csv
+  dataset/risk_suicidal_ideation_reviewed_v2.csv
+  dataset/risk_suicidal_ideation_final_v2.csv
+  evaluation/risk_ideation_v2/audit.csv
+  evaluation/risk_ideation_v2/human_review_sheet.csv
+  evaluation/risk_ideation_v2/human_review_summary.txt
+  evaluation/risk_ideation_v2/rewrite_candidates.csv
+  evaluation/risk_ideation_v2/rewrite_review_summary.txt
+  evaluation/risk_ideation_v2/final_review_report.txt
+  evaluation/risk_ideation_v2/final_human_check.csv
+  evaluation/risk_ideation_v2/final_human_check_summary.txt
+  evaluation/risk_ideation_v2/final_freeze_report.txt
+
+GROUP C — RISK EXPERIMENTS AND MODEL FREEZE (19 files; evaluation code/results)
+Reason: v1/v2 experiment scripts use Group B datasets; reports/error files
+document the fixed holdout and persistent-error analysis. Finalization
+records the experiment outcomes while leaving production models unchanged.
+Depends on Group B; it does not require application Group A to run.
+Suggested message: eval: preserve risk experiments and model finalization
+  evaluation/risk_augmentation/run_experiment.py
+  evaluation/risk_augmentation/comparison.txt
+  evaluation/risk_augmentation/baseline_report.txt
+  evaluation/risk_augmentation/augmented_report.txt
+  evaluation/risk_augmentation/baseline_errors.csv
+  evaluation/risk_augmentation/augmented_errors.csv
+  evaluation/risk_augmentation_v2/run_experiment.py
+  evaluation/risk_augmentation_v2/comparison.txt
+  evaluation/risk_augmentation_v2/baseline_report.txt
+  evaluation/risk_augmentation_v2/augmented_v1_report.txt
+  evaluation/risk_augmentation_v2/augmented_v2_report.txt
+  evaluation/risk_augmentation_v2/baseline_errors.csv
+  evaluation/risk_augmentation_v2/augmented_v1_errors.csv
+  evaluation/risk_augmentation_v2/augmented_v2_errors.csv
+  evaluation/risk_augmentation_v2/persistent_ideation_analysis.txt
+  evaluation/risk_augmentation_v2/persistent_ideation_errors.csv
+  evaluation/risk_augmentation_v2/persistent_ideation_human_review.csv
+  evaluation/risk_augmentation_v2/persistent_ideation_human_review_summary.txt
+  evaluation/risk_finalization/risk_model_finalization.txt
+
+GROUP D — FINAL AUDIT AND REPOSITORY VERIFICATION (4 files; evidence)
+Reason: retain the dated system audit, final cleanup classification,
+privacy verification, and this controlled staging plan. Depends on A–C
+so its final evidence refers to committed code, data, and experiment files.
+Suggested message: docs: record final audit and staging verification
+  evaluation/final_system_audit.txt
+  evaluation/final_cleanup_decision_verification.txt
+  evaluation/privacy_cleanup_verification.txt
+  evaluation/final_staging_review.txt
+
+Order proposed: A -> B -> C -> D. A is independent of B/C; B must precede
+C; D is last. The status of the actual Render/LINE/Firestore service is
+outside this staging review and remains unverified by this plan.
+
+6. FILE COUNT RECONCILIATION
+---------------------------
+Original privacy-report allowlist: 50 unique files.
+Group A/B/C/D assignments drawn from that allowlist: 14 + 14 + 19 + 3 = 50.
+The only extra path is this new report in Group D: 1.
+Total proposed commit candidates after this report: 51 unique files.
+Duplicate assignment: 0. Missing original allowlist file: 0.
+Unexpected extra original-list file: 0. KEEP LOCAL ONLY assigned: 0.
+.risk_review_work/ assigned: 0. No file is currently staged.
+
+7. BLOCKERS AND FINAL DECISION
+-----------------------------
+Blockers before controlled staging of these explicit 51 files: none found
+in the allowlist/status/diff/security checks. The six local-only files and
+.risk_review_work/ must remain excluded. The reparse directory is still a
+separate cleanup-review issue; its deletion is not required to stage the
+explicit allowlist and is not authorized here. Before any later commit,
+review each staged diff and verify the index contains only its group.
+
+FINAL DECISION: READY FOR CONTROLLED STAGING.
+This is a plan, not authorization or execution of git add/commit/push.
+
+CLASSIFICATION OF THIS NEW REPORT
+---------------------------------
+evaluation/final_staging_review.txt: KEEP AND COMMIT. It records the exact
+partition, exclusions, and safety checks used to make staging reviewable;
+it belongs to Group D. Updated proposed commit count: 51 (original 50 +
+this report). KEEP LOCAL ONLY remains 6; .risk_review_work/ remains the
+sole REVIEW BEFORE DECISION item. No delete item is approved.

@@ -1,0 +1,176 @@
+FINAL SYSTEM AUDIT (READ-ONLY) — 2026-09-30
+===========================================
+Scope: current working tree, not the old Render commit. Static source/Git inspection only. This task created this report; it did not execute application startup, model loading, inference, retraining, Firestore/LINE calls, deployment, or any code/data/model edit. Prior local E2E results are cited as prior evidence, not rerun here. No real user messages, LINE user IDs, token values, .env contents, or service-account contents were read or printed.
+
+1. EXECUTIVE SUMMARY
+--------------------
+The active Flask application has three routes: GET /, POST /callback, and POST /send. The normal LINE text-message path uses all six ML tasks, applies explicit/model-based safety logic, writes chat_logs, and sends a LINE reply. The LIFF result path verifies a LINE ID token, saves results under the verified sub, and then pushes a LINE message. Existing score, identity, callback-signature, sensitive-console-log, and LIFF-init protections remain present.
+
+Priority totals: MUST FIX BEFORE FINAL SUBMISSION = 3; SHOULD FIX IF TIME = 9; ACCEPTABLE AS LIMITATION = 3. These are audit findings, not patches. The main proven concerns are (1) client-controlled assessment reports are accepted as authoritative results, (2) substring safety matching can misread a negated phrase, and (3) missing/corrupt model artifacts trigger training and artifact writes during Flask import. Deployment readiness remains unverified: the Render service is reported Suspended/on an older commit, and real LINE/Firestore configuration was not tested.
+
+2. CURRENT ARCHITECTURE / EXACT DATA FLOW
+-----------------------------------------
+Flow A — ordinary LINE text event:
+1) app.py:443 callback() receives POST /callback; app.py:446-465 rejects missing/blank X-Line-Signature and delegates body/signature to LINE WebhookHandler, which validates signature and dispatches.
+2) app.py:481-485 registers handle_message() for MessageEvent/TextMessage. It takes event.source.user_id and strips message.text at app.py:487-488, then creates a user_state entry at app.py:494-496.
+3) Exact text commands "ประเมิน" (app.py:501-530) and "คำแนะนำการดูแลตนเอง" (app.py:538-591) reply and return here; they DO NOT run ML and DO NOT write chat_logs. Other text continues.
+4) app.py:599 calls ai_model.predict_all(); ai_model.py:254-278 uses six preloaded vectorizer/model pairs and returns labels plus confidences for risk, emotion, problem, support_need, intent, and conversation_style.
+5) app.py:610-629 writes chat_logs with user_id, raw text, and full prediction; write errors are logged by exception class and processing continues.
+6) app.py:636-638 writes emotion/problem to in-memory user_state. app.py:664-765 then evaluates hard-coded safety phrases, risk label/confidence, and crisis intent/confidence. app.py:785-867 composes a normal response only if safety did not trigger.
+7) app.py:877-944 builds quick replies and calls LINE reply_message(). A reply exception is not handled in handle_message().
+Documentation correction: chat_logs is written BEFORE the safety decision and LINE reply, not after. The two exact command branches bypass inference/logging. A saved log does not prove a reply was delivered.
+
+Flow B — LIFF assessment/result:
+1) app.py:357-360 index() serves templates/index.html. templates/index.html:857-878 runs liff.init with the hard-coded LIFF ID; login is requested if needed, and an init failure shows view-liff-error with reload retry (lines 533-541).
+2) templates/index.html:812-1119 owns the 2Q/9Q/8Q UI state and finalReport. The scoring rules were not changed or re-evaluated in this audit.
+3) templates/index.html:1126-1190 sendToBot() disables the send button, obtains liff.getIDToken(), checks finalReport, then POSTs score to same-origin /send with Authorization: Bearer token. No client userId is sent by the active template.
+4) app.py:368-381 send() checks JSON object, nonblank string score, and Bearer form before any LINE verify/save/push. app.py:384-405 POSTs the ID token with LINE_LOGIN_CHANNEL_ID to LINE /oauth2/v2.1/verify and takes verified sub as user_id.
+5) app.py:409-419 calls save_result(); app.py:75-79 sets results/{verified_sub} with result text. If save fails, push is skipped and JSON saved=false/pushed=false is returned.
+6) app.py:421-435 calls push_message(); 200 means saved=true/pushed=true, 502 means saved=true/pushed=false. The frontend parses JSON even for non-2xx, disables retry in its current page when saved=true, and re-enables it when save is unconfirmed/failed.
+Documentation correction: Firestore save precedes push. A 502 with saved=true is partial success, not a failed save; push timeout may leave actual delivery unknown.
+
+3. UNUSED / DEAD / DUPLICATED CODE
+----------------------------------
+- app.py:474,494-496,636-638 user_state is checked for membership and written (emotion/problem), but its stored emotion/problem fields are never read anywhere in the inspected Python source. Entries are never removed. safe_to_remove=yes for the current code path; recheck any external consumers before a future change. It has per-process/per-worker lifetime only.
+- app.py:245-291 support_reply() is used for normal non-crisis support, but its crisis_support mapping (lines 279-283) is unreachable in the current call path: app.py:822-837 substitutes a generic message when support == crisis_support. safe_to_remove=yes for that mapping in the observed flow; preserve until response expectations are reviewed.
+- ai_model.py:95-102 evaluate_model(..., artifact_name, ...) receives artifact_name, but its function body does not use that parameter. Calls are at ai_model.py:180. safe_to_remove=yes with call-site update; it is not a production behavior issue.
+- app.py:951-956 retains an old commented-out debug app.run block beside the active __main__ block at lines 958-963. safe_to_remove=yes; comments are not executed.
+- app.py:694-714 explicit_safety_phrases includes overlapping substrings (e.g. a shorter phrase already matches longer variants). safe_to_remove=yes for redundant entries under the current substring algorithm, but do not simplify the safety rule without regression tests because the algorithm itself has a boundary problem (M-02).
+- index.html at repository root is Git-tracked and differs from templates/index.html. Flask renders only templates/index.html. The root copy has older LIFF fallback code at index.html:846-869 and sends client userId without Bearer token at index.html:1169-1190. The current /send would reject that submission. safe_to_remove=uncertain because an external static host or documentation might still reference the root copy; it is not served by the inspected Flask route.
+- ai_model.py:281-312 display_prediction()/run_cli() are reached when ai_model.py is executed as a script, not through Flask import. safe_to_remove=no if that developer CLI is intentionally used. It prints its input text at line 285; use only with non-sensitive test inputs.
+- No clear unused imports were found in the production imports of app.py or ai_model.py by static reference search. reply_normal(), emotion_reply(), problem_reply(), support_reply(), and style_reply() all have current call sites. The six frontend answer arrays/indexes and finalReport are used. MODEL_SPECS is used by the explicit training CLI, so it is not dead code.
+
+4. FIRESTORE AUDIT
+------------------
+Collection: chat_logs
+Writer: app.py:614-621 in handle_message(), for non-command text only. Write form: .add() with auto document ID.
+Reader: none found in the inspected Python application/scripts. Written fields: user_id (full LINE ID in Firestore), text (raw conversation/mental-health content), prediction (all six labels/confidences). No fields are read by the running application. No explicit timestamp or retention/TTL field is written. Every eligible event can create a new document; growth is unbounded without a separate retention process. Duplicate webhook delivery can create duplicate documents. The write is best-effort: failure is logged by exception class and reply processing continues.
+
+Collection: results
+Writer: app.py:75-79 save_result(), called by /send after successful LINE token verification. Write form: .document(verified_sub).set({result: score}).
+Reader: none found in the inspected Python application/scripts. Written field: result (full assessment report text); document ID is the verified LINE user ID. No timestamp or explicit assessment version. Repeated submissions overwrite the same user's document, so document count is bounded by users, but previous results are lost and repeated pushes can still occur. The frontend, not Firestore, displays the report during the current session.
+
+Collection: users / others
+No .collection("users") or other production collection access was found in the Python source. No Firestore read/query was found. Firestore Security Rules, IAM, live data, and retention policy are not present in the inspected repository and were not verified; absence from this repo is not proof that live access is public or insecure. No real user data was accessed.
+
+5. ML INTEGRATION AUDIT
+-----------------------
+ai_model.py:254-260 loads six vectorizer/model pairs at import from models/: risk, emotion, problem, support, intent, style (12 joblib files total). All 12 required production artifacts are Git-tracked; the six base CSVs are tracked. ai_model.py:270-278 predicts all six tasks for every non-command text event. Prior evaluation/end_to_end_verification.txt reports a successful local smoke load/inference with unchanged artifact hashes; this audit did not rerun inference or evaluate accuracy.
+
+A. Used in user-facing behavior:
+- risk + risk_conf: safety trigger for risk_self_harm, risk_suicidal_ideation, risk_suicide_plan, risk_immediate_danger, risk_passive at threshold 0.65 (app.py:644-739).
+- intent + intent_conf: crisis_help safety trigger at 0.65 (app.py:743-765).
+- emotion + emotion_conf: normal reply at 0.60 (app.py:790-796).
+- problem + problem_conf: normal reply at 0.55 (app.py:801-810).
+- support_need + support_conf: normal reply at 0.55; crisis_support is intentionally rendered as a generic invitation outside the safety branch (app.py:816-842).
+- conversation_style + style_conf: normal reply at 0.50 (app.py:850-856).
+- A generic reply_normal() fallback is appended when no more than one normal reply was assembled (app.py:861-866).
+
+B. Saved for logging/analysis: the full predict_all dictionary goes into chat_logs.prediction at app.py:614-621. In a safety response, emotion/problem/support/style predictions do not shape that reply but are still saved; similarly a below-threshold output may only appear in this log for a given event.
+
+C. Generated but globally unused: none of the six task labels or six confidences is globally unused in the current app.py. They are all read by a condition/reply path. No claim about model accuracy or clinical validity follows from this code audit.
+
+Hard-coded safety rules: app.py:694-723 uses substring matching against explicit Thai phrases. This rule overrides low ML confidence. risk and crisis intent thresholds are also hard-coded in handle_message(). The crisis_support downgrade outside the safety branch is another deliberate hard-coded response rule. The safety matching boundary issue is M-02 below.
+
+6. SECURITY / PRIVACY AUDIT
+---------------------------
+FIXED / VERIFIED IN CURRENT CODE:
+- /send rejects invalid JSON or missing/null/empty/whitespace/non-string score with JSON 400 before verify/save/push (app.py:370-377). Prior local mock tests exercised these cases.
+- Active LIFF template uses getIDToken() and Bearer Authorization; /send verifies it with LINE POST /oauth2/v2.1/verify using LINE_LOGIN_CHANNEL_ID and uses returned sub rather than client userId (templates/index.html:1132-1159; app.py:379-407).
+- /callback rejects missing/blank X-Line-Signature before handler.handle(); invalid signatures are rejected by the SDK (app.py:446-466).
+- app.py save/push/chat-log error prints use exception class names only (app.py:417,434,626-629). No app.py console print of raw user text, ID token, Authorization header, full user ID, or credential was found. Frontend active-template errors are generic (templates/index.html:872-875,1184-1187).
+- LIFF init failure displays an error screen, not welcome/assessment; retry reloads (templates/index.html:533-541,857-877). The send button prevents immediate double-click in one page instance (lines 1126-1129).
+
+CURRENT RISK:
+- /send verifies identity but trusts the client-supplied score report as content; it does not recompute answers or enforce an assessment schema/length (M-01).
+- Firestore chat_logs stores raw mental-health text plus full LINE user ID; results stores the assessment under the full ID. No timestamp, retention, or data-access policy is visible in this repo. Live controls are unknown (S-04).
+- The tracked root index.html retains an unauthenticated legacy client flow and LIFF failure fallback; it is not the active Flask page but could confuse future static deployment (S-05).
+- ai_model.py:285 prints raw input in the developer CLI. It is not called by the Flask app, but real user text must not be fed into that CLI where console logging is retained (S-09).
+- A verified client may submit an arbitrarily long score string; no request-size or score-length bound is configured in app.py. Firestore/LINE may reject oversized values after verification, and the report remains client-controlled (part of M-01).
+
+INFORMATIONAL / NOT VERIFIED:
+- app.py:37-47 reads FIREBASE_CREDENTIALS_JSON or falls back to local serviceAccountKey.json. .env and serviceAccountKey.json are present locally but ignored and not Git-tracked; their contents were not read. Render needs valid secret configuration or import fails.
+- Required env names: LINE_CHANNEL_SECRET, LINE_CHANNEL_ACCESS_TOKEN, FIREBASE_CREDENTIALS_JSON (Render secret), LINE_LOGIN_CHANNEL_ID (channel configuration). PORT is supplied by Render when used by the start command. Values and live validity are unknown.
+- LINE ID token is sent only to LINE verification in the inspected backend code; no raw token is logged. This audit did not inspect platform access logs, Firestore IAM/Rules, or real network traffic.
+
+7. STATE / IDEMPOTENCY / DUPLICATION
+------------------------------------
+- /send: the disabled button prevents two rapid clicks in the same loaded page. A refresh/new tab/network retry can submit again. results/{sub}.set overwrites one document but repeats the write and may send another LINE push. After a push timeout, 502 saved=true/pushed=false cannot establish whether LINE delivered; the frontend blocks retry only until the page is reloaded. No backend request key or idempotency check exists (S-02).
+- /callback: the code does not inspect webhookEventId or maintain a processed-event store. A redelivered LINE message can run inference again, add another chat_logs document, and call reply_message again (S-03). Any LINE reply-token handling outcome on replay requires real-service evidence.
+- user_state: an ever-growing process-local dictionary is created even for command messages. The stored fields are never read. Gunicorn workers would each have separate dictionaries; restart clears them. Since no current read uses this state, no current cross-worker functional failure is proven, but memory growth is real (S-01).
+- Firestore documents are shared/persistent across workers; the dictionary is not. There is no persistent server-side conversation state in the current app.
+
+8. DEPENDENCY / CONFIGURATION AUDIT
+----------------------------------
+requirements.txt pins Flask 3.0.3, line-bot-sdk 3.11.0, firebase-admin 6.5.0, python-dotenv 1.0.1, pandas 2.2.2, joblib 1.4.2, PyThaiNLP 5.3.4, scikit-learn 1.8.0, and gunicorn 22.0.0. All directly imported production third-party packages are represented. No confirmed missing runtime dependency was found. gunicorn is the production server dependency; python-dotenv is imported at runtime even though .env use is mainly local. pandas/scikit-learn training/metrics imports are also loaded by the inference module at startup, so they cannot simply be treated as removable dev-only dependencies without code changes. numpy is directly imported only in development experiment scripts and arrives transitively through the pinned ML stack; those scripts are not the Flask entrypoint.
+
+The application still imports linebot root / linebot.models APIs, the SDK's legacy 2.x style. LINE's SDK documentation says only linebot.v3 is maintained going forward; the prior local E2E report observed a deprecation warning. The code currently works in local mocks, so migration is a maintenance item, not a demonstrated current outage (S-06).
+
+runtime.txt says python-3.11.9, while evaluation/model_info.txt records Python 3.14.3 for model training and this machine reports Python 3.14.3. Render's current documentation names PYTHON_VERSION or .python-version as supported selectors; no .python-version, render.yaml, Procfile, Dockerfile, or pyproject.toml exists here. The actual Render runtime/build/start command is not known from this repo. Cross-version joblib load under 3.11.9 has not been demonstrated; it is uncertain, not a confirmed failure (S-07). Expected production entrypoint is app:app via Gunicorn from repository root, binding 0.0.0.0:$PORT. Direct python app.py uses fixed port 5000 and is for local execution only.
+
+The active template and app.py both hard-code LIFF ID 2009909099-QZqLLKsr; its correctness and openid scope must be confirmed in LINE Console. /send uses same-origin relative URL. No localhost, 127.0.0.1, ngrok, or local-server URL was found in the active app/template. FIREBASE_CREDENTIALS_JSON must be available on Render because the ignored local JSON file is not deployed. None of these dashboard/console settings was read from the live service.
+
+9. GIT / SECRET / FILE HYGIENE
+------------------------------
+- .gitignore covers serviceAccountKey.json, .env, __pycache__/, *.pyc, and .agents/. The local .env and serviceAccountKey.json exist but are not Git-tracked; no tracked file name resembling a credential/secret/token file was found in the inspected name pattern. Contents were not inspected.
+- .risk_review_work/ is untracked and not ignored; it currently contains a node_modules link. Dataset augmentation files and many evaluation/experiment outputs are also untracked. A broad git add . would include unrelated work; explicit staging is necessary later. This audit did not stage anything.
+- The 12 production model/vectorizer joblib files and additional comparison artifacts are Git-tracked. The six base training CSVs are Git-tracked. The active HTML template and older root index.html are both Git-tracked.
+- app.py and templates/index.html have pre-existing local modifications. They were not changed by this audit. No credential, ID token, raw user message, or full LINE user ID is printed in this report.
+
+10. MUST FIX BEFORE FINAL SUBMISSION — 3 FINDINGS
+-------------------------------------------------
+M-01 | severity HIGH | Assessment result integrity
+Evidence: templates/index.html:1151-1159 submits a client-composed score string; app.py:370-377 only checks type/nonblank and app.py:409-429 stores/pushes it as an assessment result. Any authenticated client can modify the string before submission, including scores not produced by 2Q/9Q/8Q. There is also no length/shape bound.
+Affected: /send, Firestore results, LINE push, interpretation of saved assessments.
+Minimal recommended action: define a trusted server-side assessment contract (e.g. submit answers and verify/recompute the report) and a size bound before representing stored text as a validated assessment. If the project intentionally accepts self-reported text, label it explicitly as unverified instead of claiming computed integrity.
+Risk of changing now: HIGH; it changes the frontend/backend contract and needs tests across all assessment branches. No scoring logic was changed here.
+
+M-02 | severity HIGH | Safety phrase negation false positive
+Evidence: app.py:694-723 uses substring matching; an ordinary negated phrase such as "ไม่อยากตาย" contains the configured substring "อยากตาย". explicit_safety then forces the crisis response at app.py:758-781 regardless of model output.
+Affected: LINE message safety decision and user-facing reply.
+Minimal recommended action: add regression cases for negated/contextual phrases and narrowly adjust the explicit matching rule with safety-domain review.
+Risk of changing now: HIGH; a broad exception may create false negatives for genuine danger. Do not alter the rule without safety review and tests.
+
+M-03 | severity HIGH | Implicit model retraining during server import
+Evidence: app.py:14 imports predict_all; ai_model.py:254-260 calls get_model() six times at import. ai_model.py:184-199 trains, writes evaluation files, and joblib.dump()s model/vectorizer files when a pair is missing or loading raises an exception. This can silently replace frozen production artifacts or fail startup on a read-only/limited filesystem.
+Affected: startup, model integrity, deployment reproducibility, evaluation artifacts.
+Minimal recommended action: make serving fail explicitly on missing/incompatible artifacts and keep training only in an explicit offline command; validate all 12 artifacts against the actual target runtime before deployment.
+Risk of changing now: MEDIUM; a bad artifact would stop startup instead of self-recovering, which is the safer behavior for a frozen model but requires deployment checks. No training was run here.
+
+11. SHOULD FIX IF TIME — 9 FINDINGS
+-----------------------------------
+S-01 | severity MEDIUM | Write-only user_state. Evidence: app.py:474,494-496,636-638; values are never read and entries never expire. Affected: worker memory/state clarity. Action: remove after checking external consumers or add a real bounded lifecycle only if state is needed. Change risk LOW.
+S-02 | severity MEDIUM-HIGH | /send retry/push ambiguity. Evidence: app.py:77 and 409-435; templates/index.html:1127-1188. Affected: repeated writes/pushes after reload or uncertain network response. Action: design a stable assessment request ID and server-side idempotency/partial-success recovery. Change risk MEDIUM-HIGH because it changes persistence and retry contract.
+S-03 | severity MEDIUM-HIGH | Duplicate webhook events. Evidence: app.py:443-466,614-621,933-944; no webhookEventId handling. Affected: duplicate chat_logs and repeated processing/reply attempts. Action: persist handled event IDs with an appropriate expiry and test replay behavior. Change risk MEDIUM; incorrect dedup could drop real messages.
+S-04 | severity MEDIUM-HIGH, live controls UNCERTAIN | Sensitive Firestore data without in-code timestamp/retention. Evidence: app.py:77,614-621. Affected: chat_logs/results privacy and auditability. Action: review Firestore IAM/Rules, access, retention and deletion policy; add timestamps/expiry only through a planned schema change. Change risk MEDIUM; schema/retention changes affect existing data. No public exposure is inferred from the repository alone.
+S-05 | severity MEDIUM | Stale tracked root index.html. Evidence: root index.html:846-869 and 1169-1190 differs from active templates/index.html:857-877 and 1126-1190; root version uses a fake LIFF fallback/userId and lacks Bearer token. Affected: future static hosting/developer confusion; Flask GET / currently serves the corrected template. Action: document/archive the unused root file or make its status unmistakable after confirming no external reference. Change risk LOW-MEDIUM.
+S-06 | severity MEDIUM | Legacy LINE SDK API style. Evidence: app.py:16-28 and requirements.txt line 2; official SDK says linebot root modules are no longer maintained. Affected: forward compatibility. Action: plan a separately tested linebot.v3 migration. Change risk MEDIUM-HIGH because webhook/message object APIs differ.
+S-07 | severity MEDIUM-HIGH, actual failure UNCERTAIN | Python/deployment version divergence. Evidence: runtime.txt says 3.11.9; evaluation/model_info.txt and local python say 3.14.3; Render does not document runtime.txt as its version selector. Affected: artifact loading/startup. Action: inspect Render PYTHON_VERSION/build/start settings and directly verify artifact loading on the chosen runtime without get_model() fallback. Change risk LOW for verification, MEDIUM for changing runtime.
+S-08 | severity MEDIUM | Synchronous webhook/order and incomplete failure visibility. Evidence: app.py:599-629 does six-task inference then Firestore write before safety/reply at 933; chat-log failure is swallowed, reply errors can escape callback. Affected: webhook latency, missing logs despite a reply, 500/replay after reply error. Actual timeout frequency was not measured. Action: measure live latency/error cases and define explicit operational behavior before any asynchronous redesign. Change risk MEDIUM-HIGH.
+S-09 | severity LOW-MEDIUM | Developer/debug hygiene. Evidence: ai_model.py:285 prints raw CLI input; app.py:951-956 has dead commented debug startup; ai_model.py:97 has unused artifact_name parameter; app.py safety phrases overlap. Affected: accidental CLI privacy exposure and maintenance noise, not the active Flask console path. Action: keep real user data out of CLI; clean dead code separately with regression checks. Change risk LOW for comments/unused parameter, MEDIUM for safety-rule edits.
+
+12. ACCEPTABLE AS LIMITATION — 3 FINDINGS
+-----------------------------------------
+A-01 | severity LOW | Text-only webhook/command coverage. Evidence: @handler.add(MessageEvent, message=TextMessage) at app.py:481-485; commands at 501-591 return before ML/log. Affected: non-text events and command analytics. Action: document exact supported event/command behavior; expand only if product requirements demand it. Change risk LOW-MEDIUM.
+A-02 | severity LOW, requirement-dependent | Only latest result retained per user. Evidence: results/{verified_sub}.set() at app.py:77 overwrites previous result; no history/timestamp. Affected: longitudinal review/audit. Action: document latest-only semantics; if history is a requirement, redesign collection deliberately. Change risk MEDIUM due schema and privacy implications.
+A-03 | severity HIGH as an interpretation limit, not a code defect | Six ML tasks and hard-coded thresholds are project-level decision support, not clinical validation. Evidence: ai_model.py:270-278 and app.py:664-765; prior evaluation artifacts are project experiments. Affected: claims made about model safety/accuracy. Action: state limits clearly and require appropriate expert review before clinical use. Change risk LOW for documentation, HIGH for redesigning safety decisions.
+
+13. RECOMMENDED NEXT ACTIONS (NOT EXECUTED)
+-------------------------------------------
+1) Human Reviewer reviews M-01 to M-03, particularly the safety-rule change risk. Define whether assessment results are authoritative or explicitly unverified before final submission.
+2) For any Render deployment, verify actual runtime/start/build settings, complete environment secrets, LINE LIFF/openid/provider settings, Firestore permissions, and direct loading of the 12 tracked artifacts in the selected Python environment. The existing service is reported Suspended/old and no production behavior was tested here.
+3) Use the existing manual real-service E2E checklist only after a separately approved deployment. Observe webhook replay, /send retries, Firestore writes, LINE reply/push, and logs without recording user text or token values.
+4) Keep model/dataset/evaluation freeze and application changes separate. Do not use a broad Git stage command. No implementation from this audit was performed.
+
+Sources for current external API/runtime statements (official):
+https://github.com/line/line-bot-sdk-python
+https://developers.line.biz/en/reference/liff/
+https://developers.line.biz/en/reference/line-login/
+https://render.com/docs/python-version
+https://render.com/docs/deploy-flask
+
+FILES INSPECTED
+---------------
+app.py; ai_model.py; templates/index.html; index.html (legacy copy); requirements.txt; .gitignore; runtime.txt; evaluation/model_info.txt; evaluation/end_to_end_verification.txt; evaluation/render_deployment_readiness.txt; names/status of tracked models/, base dataset files, experiment scripts, .risk_review_work/, and root files. Credential/.env content and all live external systems were intentionally not inspected.
+
+Git status is captured in the task response after this new report was created.

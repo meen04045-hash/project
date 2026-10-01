@@ -1,0 +1,76 @@
+GROUP A COMMIT VERIFICATION
+Date: 2026-10-01 (Asia/Bangkok)
+Scope: local commit and verification of Group A only.
+
+1. SOURCE STAGING REPORT
+Source: evaluation/group_a_staging_verification.txt and the Group A exact
+file list in evaluation/final_staging_review.txt. The staging report was
+not added to this commit.
+
+2. PRE-COMMIT CHECK
+The index contained exactly 14 unique Group A paths. Missing paths: 0.
+Extra staged paths: 0. `git diff --cached --check` returned exit 0 with
+no whitespace error. No file was staged immediately before committing.
+
+3. COMMIT IDENTITY
+Full hash: b7e12a144ce46d018c3821a5346157a47f2bd272
+Short hash: b7e12a1
+Subject: fix: harden model startup, assessment and safety paths
+Commit was created locally without amend or squash.
+
+4. EXACT COMMIT FILES (git diff-tree --no-commit-id --name-only -r HEAD)
+  ai_model.py
+  app.py
+  evaluation/application_security_cleanup.txt
+  evaluation/cli_input_logging_cleanup.txt
+  evaluation/client_authoritative_assessment_analysis.txt
+  evaluation/end_to_end_verification.txt
+  evaluation/final_must_fix_closure_verification.txt
+  evaluation/model_startup_safety_fix.txt
+  evaluation/safety_negation_analysis.txt
+  evaluation/safety_negation_final_fix.txt
+  evaluation/safety_negation_fix.txt
+  evaluation/server_authoritative_assessment_fix.txt
+  evaluation/user_state_cleanup.txt
+  templates/index.html
+
+Expected files: 14. Actual files: 14. Unique files: 14.
+Missing Group A files: 0. Unexpected files: 0.
+Name-status reconciliation: ai_model.py, app.py, and templates/index.html
+were modified; the 11 evaluation reports were added.
+
+5. PRODUCTION-CODE COMMIT REVIEW
+`git show --stat --oneline HEAD` reports 14 files changed, 1168 insertions,
+103 deletions. Reviewed `git show --format= -- ai_model.py app.py
+templates/index.html` against the approved staged diff:
+- ai_model.py fails clearly when model/vectorizer artifacts cannot load in
+  normal startup, preserves the explicit force_train path, and stops CLI
+  output from echoing raw input.
+- app.py validates structured assessment answers, builds the result on the
+  backend, and retains verified LINE sub as the user identity. It also
+  reduces sensitive console logging, adds the narrow safety-negation helper,
+  and removes unused user_state storage. The existing safety OR policy and
+  save/push partial-success handling remain in the surrounding code.
+- templates/index.html provides LIFF initialization error/retry UI and sends
+  structured answers. Existing Bearer ID-token use and duplicate-click
+  protection remain in the surrounding code.
+No unexpected production-code hunk was found in this commit review.
+
+6. POST-COMMIT WORKING TREE
+`git diff --name-only` and `git diff --cached --name-only` returned no paths:
+the three tracked code files and all Group A reports have no staged or
+unstaged changes. `git status --short` lists only untracked next-round work:
+Group B datasets, Group C evaluations, Group D audit/planning files, this
+new report, the Group A staging report, six KEEP LOCAL ONLY files, and
+.risk_review_work/. These were not staged or cleaned up.
+
+7. PUSH / DEPLOY AND BLOCKERS
+Push performed: NO. Deploy performed: NO. No retraining was run.
+Blockers found in this commit verification: 0.
+Final result: GROUP A COMMIT VERIFIED.
+
+CLASSIFICATION OF THIS REPORT
+evaluation/group_a_commit_verification.txt: KEEP FOR GROUP D. It records
+the local commit identity and exact-file reconciliation for the final audit.
+This report is intentionally unstaged. The Group D exact file list must be
+updated explicitly to include it before any later Group D staging action.

@@ -1,0 +1,249 @@
+FINAL CLEANUP DECISION VERIFICATION — READ-ONLY ANALYSIS
+Date: 2026-10-01 (Asia/Bangkok)
+Reference: evaluation/final_working_tree_cleanup_plan.txt and current Git status.
+Only this new report was created. No existing code, data, evaluation,
+.gitignore, or other file was edited, deleted, moved, renamed, or staged.
+No commit, push, or deployment was performed.
+
+COUNTING RULE
+-------------
+Count one item per modified file, untracked dataset/evaluation file, or
+top-level temporary directory. The previous plan counted 55 logical items;
+this report adds one, giving 56. The 1,028 dependency files reachable under
+.risk_review_work/ are grouped as one directory item, not 1,028 decisions.
+
+1. THREE PREVIOUSLY UNDECIDED REPORTS
+-------------------------------------
+A. evaluation/render_deployment_readiness.txt — KEEP LOCAL ONLY
+  Historical value: records the Render/LINE/Firestore configuration questions,
+  routes, required environment variable names, and the fact that no live
+  deployment test had occurred on 2026-09-30.
+  Obsolete portions: says get_model() automatically retrains after a missing
+  or bad artifact; current ai_model.py raises instead. It describes /send as
+  validating/sending a client score; current app.py validates structured
+  answers and builds the result on the server. Its proposed app-only commit
+  also omits the subsequently changed ai_model.py. The quoted line locations
+  no longer describe current source reliably.
+  Commit risk: high chance readers would mistake the older deployment
+  checklist for current readiness. Keep locally as a dated historical
+  snapshot; prepare a corrected current checklist separately if needed.
+
+B. evaluation/should_fix_triage.txt — KEEP LOCAL ONLY
+  Historical value: captures the original nine SHOULD FIX observations and
+  the rationale for prioritizing S-01 and S-09 on 2026-10-01.
+  Obsolete portions: still reports S-01/S-09 as active FIX BEFORE SUBMISSION
+  work, recommends doing both, and says nine SHOULD FIX items remain active.
+  Current app.py no longer has user_state; ai_model.py no longer prints the
+  raw CLI input. Its unchanged risks are historical observations only.
+  Commit risk: readers could treat the outdated count and next actions as
+  the present project state. Keep locally; a later new triage can cite it.
+
+C. evaluation/risk_ideation_v2/row14_recovery_report.txt — KEEP LOCAL ONLY
+  Historical value: correctly documents that the original row-14 rewrite
+  draft could not be recovered from the files available at that time.
+  Obsolete portions: says rewrite_candidates.csv has only five rows and
+  row 14 still needs a rewrite. Current file has all six rewrite rows;
+  row 14 has human_final_decision=KEEP. The final four-row Human Check kept
+  rows 6, 27, and 13 and dropped row 24.
+  Commit risk: without an explicit later correction, it looks like the
+  28-row final dataset was made with an unresolved review. Keep locally as
+  an investigation record; current Human Review/freeze artifacts are the
+  repository evidence.
+
+None of these three should be deleted merely because it is dated. None
+should be staged as current evidence in its present form.
+
+2. MANUAL REAL-SERVICE CHECKLIST
+--------------------------------
+evaluation/manual_real_service_e2e.txt — KEEP LOCAL ONLY.
+It is a preparation worksheet: all 44 step statuses are still blank, as
+are the tester/environment and final result fields. There is no recorded
+real-service observation or evidence. It explicitly says no live test has
+been performed. Its remaining-risk section also still describes old
+client-authoritative score, user_state growth, and automatic model retrain.
+Committing this as a completed E2E record would be misleading. Keep it
+locally for the Human Tester; do not fill any result without observation.
+
+3. PRIVACY SCAN OF THE REQUESTED COMMIT CANDIDATES
+--------------------------------------------------
+Scope: five new dataset CSVs plus all 28 files in the four requested
+evaluation subdirectories (risk_augmentation, risk_augmentation_v2,
+risk_finalization, risk_ideation_v2), excluding the local-only review_queue
+and row14 report = 33 files. This is a local static scan, not proof that
+unstructured text has no identifier.
+
+Checks: email addresses, Thai mobile-number shapes, full LINE user IDs,
+private-key/service-account markers, common access-key/JWT/Bearer token
+formats, credential-bearing URL query parameters, absolute Windows user
+profile paths, and formal Thai first/surname patterns. CSV reviewer-note
+columns were included. The scan reported no matching email, phone, full
+LINE user ID, token, Firebase/service-account key, access key, credential
+URL, or formal Thai full name. Generic mental-health dataset sentences
+without an identifier were not counted as PII.
+
+Sensitive file found (1):
+- evaluation/risk_finalization/risk_model_finalization.txt, line 5:
+  an absolute Windows profile path reveals the local OS account name.
+  Type: local account/profile identifier; no credential value was found.
+  This is the only confirmed privacy blocker in the scanned set. The file
+  is important freeze evidence, so classify REVIEW BEFORE DECISION until
+  the owner either approves including that identifier or authorizes a
+  separate minimal redaction. Do not alter its frozen metrics/hashes.
+
+The 10 reviewer_note cells in persistent_ideation_human_review.csv had no
+matches to the tested identifier/credential patterns. These are project
+annotation notes, not a relabel of the holdout. Thai names without formal
+titles or novel secret formats could escape pattern matching; a human
+content check remains prudent for any public repository. No raw candidate,
+holdout, reviewer-note, token, or credential value is reproduced here.
+
+Privacy blockers found: 1 file. No credential/key leak was detected by the
+specified scan. The other 32 scanned files are safe to commit under this
+static check, subject to ordinary repository publication review.
+
+4. .risk_review_work/ REPARSE POINT SAFETY
+-----------------------------------------
+.risk_review_work/ and its only top-level child node_modules both have
+Directory and ReparsePoint attributes. fsutil reports Microsoft directory
+reparse tag 0x9000601a for both. PowerShell LinkType and Target are empty;
+Resolve-Path returns their own workspace paths and does not establish an
+underlying target. Git enumerates 1,028 untracked dependency files reachable
+under node_modules (about 50.3 MB). No separate review/rewrite file or
+source-code dependency was found in this directory; evaluation references
+to it are historical search/status notes.
+
+The read-only checks do not prove whether an underlying target exists inside
+or outside the project, nor what deleting the entry would do to any synced
+or target content. Therefore classify .risk_review_work/ as REVIEW BEFORE
+DECISION. It must never be staged, but no deletion command is recommended
+until the reparse/cloud-file behavior and deletion scope are confirmed by
+an appropriate non-destructive inspection or owner backup/confirmation.
+
+5. EVALUATION REDUNDANCY / HISTORICAL VALUE
+-------------------------------------------
+The 41 evaluation files proposed in the previous plan had two byte-identical
+file pairs only:
+- risk_augmentation/baseline_errors.csv =
+  risk_augmentation_v2/baseline_errors.csv
+- risk_augmentation/augmented_errors.csv =
+  risk_augmentation_v2/augmented_v1_errors.csv
+They are intentional snapshots of the same fixed holdout in two experiment
+folders. Keep both pairs so each requested experiment stays self-contained
+and the reproduced baseline/v1 errors can be compared directly.
+
+Historical evidence worth keeping: v1/v2 scripts, reports, comparisons and
+error files; ideation audit.csv, Human Review decisions, rewrites, final
+check and freeze reports; original safety-negation analysis and intermediate
+fix followed by final fix; model-startup and server-authoritative fix reports;
+final MUST FIX closure; application/security and S-01/S-09 cleanup reports.
+The older reports describe what was tested at their dates; the final closure
+and final freeze reports govern current claims. audit.csv's 40 screening
+records consist of 33 PASS texts exactly matching candidate v2 and seven
+earlier REJECT records, so it is provenance rather than a row-count error.
+
+Redundant and safe to omit from the intended commit: the unfilled manual
+worksheet, the review_queue.md ordering aid, and the three outdated reports
+in section 1. evaluation/final_working_tree_cleanup_plan.txt is also
+superseded by this verification: it tentatively recommended deleting the
+reparse directory, which is not yet demonstrated safe. Keep that earlier
+plan locally, not as the definitive repository instruction. No existing
+file is approved for deletion by this analysis.
+
+6. DEFINITIVE CLASSIFICATION AFTER CREATING THIS REPORT
+-------------------------------------------------------
+KEEP AND COMMIT — 48 EXACT FILES (not staged):
+Application code (3):
+  ai_model.py
+  app.py
+  templates/index.html
+Experimental dataset provenance (5):
+  dataset/risk_augmented_candidate.csv
+  dataset/risk_augmented_reviewed.csv
+  dataset/risk_suicidal_ideation_candidate_v2.csv
+  dataset/risk_suicidal_ideation_reviewed_v2.csv
+  dataset/risk_suicidal_ideation_final_v2.csv
+Root evaluation evidence (13):
+  evaluation/application_security_cleanup.txt
+  evaluation/cli_input_logging_cleanup.txt
+  evaluation/client_authoritative_assessment_analysis.txt
+  evaluation/end_to_end_verification.txt
+  evaluation/final_must_fix_closure_verification.txt
+  evaluation/final_system_audit.txt
+  evaluation/model_startup_safety_fix.txt
+  evaluation/safety_negation_analysis.txt
+  evaluation/safety_negation_fix.txt
+  evaluation/safety_negation_final_fix.txt
+  evaluation/server_authoritative_assessment_fix.txt
+  evaluation/user_state_cleanup.txt
+  evaluation/final_cleanup_decision_verification.txt
+V1 experiment (6):
+  evaluation/risk_augmentation/run_experiment.py
+  evaluation/risk_augmentation/comparison.txt
+  evaluation/risk_augmentation/baseline_report.txt
+  evaluation/risk_augmentation/augmented_report.txt
+  evaluation/risk_augmentation/baseline_errors.csv
+  evaluation/risk_augmentation/augmented_errors.csv
+V2 experiment (12):
+  evaluation/risk_augmentation_v2/run_experiment.py
+  evaluation/risk_augmentation_v2/comparison.txt
+  evaluation/risk_augmentation_v2/baseline_report.txt
+  evaluation/risk_augmentation_v2/augmented_v1_report.txt
+  evaluation/risk_augmentation_v2/augmented_v2_report.txt
+  evaluation/risk_augmentation_v2/baseline_errors.csv
+  evaluation/risk_augmentation_v2/augmented_v1_errors.csv
+  evaluation/risk_augmentation_v2/augmented_v2_errors.csv
+  evaluation/risk_augmentation_v2/persistent_ideation_analysis.txt
+  evaluation/risk_augmentation_v2/persistent_ideation_errors.csv
+  evaluation/risk_augmentation_v2/persistent_ideation_human_review.csv
+  evaluation/risk_augmentation_v2/persistent_ideation_human_review_summary.txt
+Ideation v2 audit and decisions (9):
+  evaluation/risk_ideation_v2/audit.csv
+  evaluation/risk_ideation_v2/human_review_sheet.csv
+  evaluation/risk_ideation_v2/human_review_summary.txt
+  evaluation/risk_ideation_v2/rewrite_candidates.csv
+  evaluation/risk_ideation_v2/rewrite_review_summary.txt
+  evaluation/risk_ideation_v2/final_review_report.txt
+  evaluation/risk_ideation_v2/final_human_check.csv
+  evaluation/risk_ideation_v2/final_human_check_summary.txt
+  evaluation/risk_ideation_v2/final_freeze_report.txt
+
+KEEP LOCAL ONLY — 6 EXACT FILES:
+  evaluation/render_deployment_readiness.txt
+  evaluation/should_fix_triage.txt
+  evaluation/risk_ideation_v2/row14_recovery_report.txt
+  evaluation/manual_real_service_e2e.txt
+  evaluation/risk_ideation_v2/review_queue.md
+  evaluation/final_working_tree_cleanup_plan.txt
+
+DELETE BEFORE COMMIT — 0 FILES/DIRECTORIES:
+  None currently demonstrated safe to delete. Omit local/review items from
+  staging instead of deleting them in this verification round.
+
+REVIEW BEFORE DECISION — 2 ITEMS:
+  evaluation/risk_finalization/risk_model_finalization.txt
+    Missing decision: may its local OS account/profile path be published,
+    or should a separate authorized redaction be made?
+  .risk_review_work/
+    Missing evidence: real reparse/cloud target and the effect of removing
+    this directory entry on synced/target content.
+
+7. CLEANUP BLOCKERS AND NEXT DECISION GATES
+-------------------------------------------
+- Privacy blocker: one important freeze report contains an absolute local
+  profile path. Do not stage that report until its publication decision is
+  made. Its other metric/hash content remains valuable and unchanged.
+- Reparse blocker: never delete or recursively traverse .risk_review_work/
+  for cleanup on the present evidence. Never stage its dependency files.
+- The application scope could be reviewed separately, but any stage would
+  include all current uncommitted hunks in the three code files; inspect the
+  complete staged diff before a later authorized commit.
+- No production model was replaced by experimental v2. No dataset was
+  merged or retrained in this verification.
+
+FINAL COUNTS (56 LOGICAL ITEMS)
+-------------------------------
+KEEP AND COMMIT: 48
+KEEP LOCAL ONLY: 6
+DELETE BEFORE COMMIT: 0
+REVIEW BEFORE DECISION: 2
+PRIVACY BLOCKERS: 1
