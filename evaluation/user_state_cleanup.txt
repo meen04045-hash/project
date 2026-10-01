@@ -1,0 +1,53 @@
+SHOULD FIX S-01 — UNUSED PER-USER STATE CLEANUP
+Date: 2026-10-01
+Scope: app.py only; local/mock verification only
+
+1. ORIGINAL USAGE AND REFERENCE CHECK
+Before this change, app.py declared a process-level `user_state = {}`.
+handle_message() read only dictionary membership (`if user_id not in user_state`),
+created an empty entry for a new user, then assigned the current prediction's
+`emotion` and `problem` to that entry. There was no later read of either stored
+value and no functional dependency on the dictionary in app.py. The local
+`emotion` and `problem` variables from predict_all() are separately consumed
+by the response logic and remain intact.
+
+2. CODE REMOVED
+Removed the global dictionary, new-user initialization, and the two writes to
+`user_state[user_id]`. No replacement state was introduced. The prediction,
+Firestore, safety, threshold, assessment, and LINE reply code was not changed
+as part of S-01.
+
+3. REGRESSION TESTS (AST-extracted functions with mocks; no real services)
+A. New user normal message: PASS — handle_message() replied and saved a log.
+B. Same user sent three messages: PASS — no KeyError or state dependency.
+C. predict_all() outputs: PASS — emotion/problem/support/style were used in
+   the normal response as before.
+D. Safety branch: PASS — explicit phrase, high-risk prediction, and crisis
+   intent each entered the safety response branch; a clear denial remained
+   on the normal branch.
+E. Normal response branch: PASS — expected response generated.
+F. Firestore chat_logs payload: PASS — exact mock payload remained
+   {user_id, stripped text, prediction}.
+G. Reference check: PASS — no `user_state` name remains in app.py text or AST.
+
+The test executed detect_explicit_safety() and handle_message() from the
+current source in an isolated namespace. LINE reply, Firestore add,
+predict_all(), and response helpers were mocked; no LINE/Firebase request or
+model training occurred. This is local regression evidence, not a live-service
+end-to-end test.
+
+4. MEMORY GROWTH AND BEHAVIOR
+Fifty distinct mocked user messages were processed without a retained
+per-user dictionary. No process-level dictionary with user entries remains
+from this code path. The response and chat-log behavior checked above did not
+change. This removes only the unused per-worker memory growth caused by
+`user_state`; other service memory behavior was outside this test.
+
+5. REMAINING GLOBALS
+app.py still has global Firebase/LINE service clients (`db`, `line_bot_api`,
+`handler`). They are service objects, not a per-user state replacement.
+`user_id`, `emotion`, and `problem` remain local to handle_message().
+
+Files changed in this task: app.py; evaluation/user_state_cleanup.txt (new).
+No dataset, model, ai_model.py, template, or earlier evaluation file was
+changed. No retraining, commit, push, or deployment was performed.

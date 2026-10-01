@@ -1,0 +1,98 @@
+END-TO-END VERIFICATION — CURRENT APPLICATION
+==============================================
+Scope: verification/test-first only. No application code, ML model, dataset, existing evaluation artifact, scoring logic, or production service was changed.
+Primary code inspected: app.py, ai_model.py, templates/index.html.
+Result: All product assertions in the local automated/mock suite passed. The application is ready to enter manual real-service E2E testing. This is NOT production or external-service verification.
+
+1. AUTOMATED / MOCK TESTS RUN
+-----------------------------
+A. LINE webhook — PASS (local SDK dispatch + Flask mock)
+- Missing X-Line-Signature -> HTTP 400.
+- Invalid signature -> HTTP 400.
+- Four valid signed text events dispatched to handle_message, with four mocked LINE replies and four mocked chat_logs writes.
+- An unsupported-for-this-handler LINE follow event returned HTTP 200 without a server crash or unintended reply.
+- Normal response and three safety paths were exercised: explicit phrase, high-confidence model risk, and high-confidence crisis intent.
+- Real linebot WebhookHandler was used for signature/dispatch; LINE reply and Firestore were mocked. The SDK emitted a deprecation warning for linebot.v2-style WebhookHandler; no migration was made.
+
+B. ML inference — PASS (actual serialized artifacts, local only)
+- Loaded all six existing model/vectorizer pairs directly from models/ without importing ai_model.py startup code. This avoided its train-and-save fallback.
+- Called the current clean_text, tokenize, predict_with_confidence, and predict_all functions in memory with seven temporary smoke inputs: normal, depression, stress, risk_passive, risk_suicidal_ideation, risk_suicide_plan, and risk_immediate_danger.
+- Every input returned all six task labels and six confidence values; no inference exception. Labels were valid model classes and confidence values were in [0, 1].
+- SHA-256 values of all 12 production model artifacts matched before and after loading/inference. No train_model, fit, or joblib.dump call was made.
+- One temporary input intended to probe passive wording was predicted as risk_suicidal_ideation. This is a smoke-test observation only, not an accuracy estimate or a finding that any dataset label is wrong.
+- An initial test-harness assertion expected support_need_conf rather than the code's support_conf; the harness was corrected and rerun. This was not an application failure. No source file changed.
+
+C. /send — PASS (Flask test client with mocked LINE verify, Firestore and push)
+- Invalid JSON -> 400, saved=false, pushed=false.
+- Missing score, null, empty, whitespace-only, number, boolean, list, object -> 400 JSON; zero verify/save/push calls.
+- Missing/malformed Authorization (four cases) -> 401; no verify/save/push.
+- Invalid LINE ID token mock -> 401; verify timeout mock -> 503; no save/push.
+- Valid mocked LINE verification -> backend used verified sub for Firestore document and LINE push, ignoring forged user_id and userId fields supplied by client.
+- Firestore save + LINE push success -> 200, saved=true, pushed=true.
+- Firestore save failure -> 500, saved=false, pushed=false; push was not called.
+- Save success + LINE push failure -> 502, saved=true, pushed=false.
+- Save success + push timeout -> 502, saved=true, pushed=false; actual delivery remains ambiguous.
+- Captured error logs did not contain the sentinel assessment text, token, or verified user ID.
+
+D. Identity — PASS (local code and mock)
+- LIFF uses getIDToken() and sends Authorization: Bearer <token>.
+- Backend sends id_token and LINE_LOGIN_CHANNEL_ID as client_id to POST https://api.line.me/oauth2/v2.1/verify and uses the verified response sub as user_id.
+- The client request body contains score only in the tested frontend path; a forged client user ID was ignored in the backend mock.
+- Current app/frontend diagnostic logs did not expose the tested token, Authorization value, or raw user text.
+- Real LINE Login channel configuration, ID-token validity, and live verify service were not tested.
+
+E. LIFF frontend — PASS (Node runtime with mock DOM, LIFF and fetch)
+- JavaScript parsed; successful LIFF init and login scheduled the welcome view.
+- Failed LIFF init showed the error view without scheduling welcome; retry markup reloads the page.
+- One mocked assessment path progressed 2Q -> 9Q -> 8Q -> result and produced a nonempty finalReport. This is path verification, not a scoring audit.
+- sendToBot called getIDToken(), sent a Bearer token and score-only JSON body to /send.
+- Two immediate send clicks produced one fetch; success left the send button disabled.
+- A saved=false response and a network failure re-enabled the button for retry.
+- A 502 saved=true/pushed=false response kept the button disabled and notified the user that the result was saved but LINE delivery failed.
+- Sensitive text placed in mocked LIFF/fetch exception messages was not printed by frontend logs.
+
+2. DATA-FLOW VERIFICATION
+-------------------------
+Flow 1 — LINE message -> /callback -> signature validation -> ML analysis -> safety decision -> LINE reply -> chat_logs
+Local functional status: PASS with mocked LINE/Firestore/prediction boundaries. Valid signed text events reached prediction, the safety decision, LINE reply and chat_logs. Missing/invalid signatures stopped before dispatch; unsupported follow event did not crash.
+Actual code order differs from the schematic above: signature -> handle_message -> predict_all at app.py:599 -> chat_logs add at app.py:614 -> safety decision at app.py:758 -> LINE reply at app.py:933. The log write happens before safety selection and reply, not after reply. This was not a runtime failure in the tested path; no ordering change was made.
+External/production status: NOT TESTABLE LOCALLY. No real LINE webhook delivery, Firestore chat_logs write, or LINE reply was exercised.
+
+Flow 2 — LIFF -> authentication -> assessment result -> /send -> LINE ID-token verification -> verified sub -> Firestore result save -> LINE push
+Local functional status: PASS with mocked LIFF/LINE verify/Firestore/push. The assessment produced finalReport, frontend sent Bearer ID token, backend used verified sub, then saved before push and returned the expected JSON contract.
+External/production status: NOT TESTABLE LOCALLY. No real LIFF session, LINE token verification, Firestore result write, or push delivery was exercised.
+
+3. BLOCKERS
+-----------
+No clear application blocker was found by these local automated/mock tests. There was no product test failure requiring a code change. The application can proceed to manual real-service E2E testing, but must not be described as production verified at this stage.
+
+4. NON-BLOCKING RISKS / OBSERVATIONS
+------------------------------------
+- Current LINE SDK WebhookHandler emits a deprecation warning; migration was outside this test-only scope.
+- Actual Flow 1 stores chat_logs before safety selection and LINE reply; a later reply failure can leave a saved log with no reply. The listed schematic order should not be mistaken for the code's execution order.
+- Duplicate webhook delivery and repeated /send after refresh are not protected by backend deduplication/idempotency. The send button prevents immediate double clicks in one page instance only.
+- A push timeout after a successful save returns saved=true/pushed=false even when the delivery outcome may be unknown.
+- score/finalReport content remains client-authoritative after identity verification.
+- verify endpoint error mapping and user_state cleanup remain outside this round.
+- ai_model.py get_model can train, evaluate, and write artifacts if a model/vectorizer file is absent or load fails. All 12 current artifacts existed and loaded for this test; full startup fallback was deliberately not invoked.
+No item above was changed in this round.
+
+5. EXTERNAL / MANUAL VERIFICATION CHECKLIST
+-------------------------------------------
+[ ] 1. Open the LIFF app from the real LINE chat.
+[ ] 2. Complete LINE Login; confirm the LIFF channel has the required openid scope.
+[ ] 3. Complete one assessment and inspect the displayed result.
+[ ] 4. Send the result and observe /send HTTP 200 with saved=true, pushed=true.
+[ ] 5. Check Firestore results has the result under the LINE user ID returned by verification.
+[ ] 6. Confirm the same LINE user receives the pushed result message.
+[ ] 7. Send an ordinary message to the bot and confirm the normal reply.
+[ ] 8. Send an authorized safety-path test message and confirm the current safety response.
+[ ] 9. Inspect Render/server/browser logs for absence of raw user text, ID/access tokens, Authorization headers, full LINE user IDs, and credential data.
+[ ] 10. Observe refresh and quick double click behavior for simple duplicate save/push effects. This is observation only; do not infer backend idempotency or change it in this round.
+
+6. EXTERNAL VERIFICATION NOT YET PERFORMED
+------------------------------------------
+The tests did not call LINE Login verify, LINE webhook delivery, LINE reply/push, live LIFF, Firestore, or Render. Live credential validity, network connectivity, deployed configuration, Firestore permissions, and actual user-visible delivery remain unverified. The full Flask startup path with live credentials was not run. Manual checklist completion is required before claiming production E2E verification.
+
+Files changed in this task: evaluation/end_to_end_verification.txt only.
+No code change, retraining, model overwrite, dataset edit, scoring edit, commit, or push was performed.

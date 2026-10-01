@@ -1,0 +1,212 @@
+CLIENT-AUTHORITATIVE ASSESSMENT RESULT — ANALYSIS ONLY — 2026-09-30
+===================================================================
+
+Scope: app.py and templates/index.html as currently present in the working
+tree. This traces who calculates and validates the assessment result. The
+existing 2Q/9Q/8Q scoring rules, transitions, and thresholds are treated as
+frozen requirements; their clinical or mathematical correctness was not
+audited. No application code, dataset, model, or existing evaluation was
+changed, and no external service was called.
+
+1. CURRENT FLOW AND EXACT REQUEST SCHEMA
+----------------------------------------
+1) templates/index.html:812-814 stores answers2Q (2 values), answers9Q (9),
+   and answers8Q (8) in mutable browser JavaScript arrays. The visible 2Q
+   choices call select2Q() with 0/1 (lines 595-604); 9Q choices call
+   select9Q() with 0/1/2/3 (633-649); 8Q choices call select8Q() with 0/1
+   (677-684). These are UI values, not server-validated inputs today.
+2) submit2Q() at 913-925 sums the two 2Q answers and either calls
+   generateReport(0, 0, 0) or moves to 9Q. submit9Q() at 972-991 sums 9Q,
+   applies its existing branch condition, and either moves to 8Q or calls
+   generateReport(score9Q, 0, 9). submit8Q() at 1040-1057 sums 9Q and
+   calculates the existing weighted 8Q value from Q8, then calls
+   generateReport(score9Q, score8Q, 8). This describes the current code path;
+   it does not re-audit those rules.
+3) generateReport() at 1077-1117 creates the report string in the mutable
+   browser variable finalReport and updates result-screen DOM text. The
+   string may contain a 2Q normal result, or 9Q score/interpretation, or
+   9Q and 8Q scores/interpretations. The exact branch depends on the existing
+   client-side flow. Display DOM text is separate from finalReport.
+4) sendToBot() at 1126-1160 checks for an ID token and a nonblank
+   finalReport, then sends this exact JSON body to same-origin POST /send:
+
+       {"score": finalReport}
+
+   It also sends Content-Type: application/json and
+   Authorization: Bearer <value from liff.getIDToken()> (1131-1159).
+   It does NOT send answers2Q, answers9Q, answers8Q, stepFinished,
+   numeric scores as separate fields, finalReport as a named field, a
+   summary/risk-level field, or user_id. "score" is the complete formatted
+   result text, despite its field name.
+5) app.py:368-378 parses JSON and reads only data.get("score"). It checks
+   that the body is an object and score is a string that is nonblank after
+   strip(). It does not trim the value before use, parse its contents, check
+   a numeric range, recompute a score, or validate an assessment branch.
+   Additional request fields would be ignored by the current function.
+6) app.py:380-405 reads the Bearer token, sends ID token + configured
+   LINE_LOGIN_CHANNEL_ID to LINE POST /oauth2/v2.1/verify, and requires a
+   nonempty string sub from the verification response. app.py:407 assigns
+   user_id = verified["sub"]. A client-supplied user_id is never read.
+7) app.py:409-435 calls save_result(user_id, text), then LINE push_message
+   to the same verified user_id. save_result() at 76-80 writes
+   results/<verified sub> = {"result": text} in Firestore. The pushed LINE
+   message is "📋 ผลแบบประเมินของคุณ\n\n" + text. Thus the client-provided
+   score string controls both stored result and pushed content. Current
+   responses preserve saved/pushed partial-success states: 200 both true,
+   500 both false when save fails, 502 saved true/pushed false when push fails.
+
+Field / value                 Sent by client     Read or verified by backend
+----------------------------  -----------------  ---------------------------
+JSON score (report string)    Yes                Read; type/nonblank only
+JSON finalReport              No                 No
+JSON answers2Q/9Q/8Q         No                 No
+JSON numeric score/risk text  No separate field  No content verification
+JSON user_id                  No                 Ignored if inserted
+Authorization ID token        Yes, header        Verified with LINE endpoint
+LINE sub                      No                 Read from LINE verify result
+Result-screen DOM text        No                 No
+
+2. TRUST BOUNDARY AND DATA-INTEGRITY RISK
+-----------------------------------------
+A. Identity trusted: After a successful LINE verification call, the backend
+   uses the returned sub for the Firestore document key and LINE push target.
+   Editing a JSON user_id cannot select a different identity in this code.
+   This is a statement about the code path, not a live-service verification.
+B. Assessment content trusted: The backend accepts any nonblank string in
+   score as the assessment report. It has no answer arrays or evidence that
+   the UI assessment was completed. Browser state, finalReport, or the HTTP
+   request body can be changed by a client holding a valid ID token.
+C. Calculated score trusted: The numbers and interpretation embedded in the
+   score text are calculated in the browser and cannot be checked by /send.
+   There is no separate numeric score field to validate.
+D. Display text trusted: The local result-screen DOM is browser-controlled,
+   but /send does not read it. The outgoing finalReport string is also
+   browser-controlled and directly becomes Firestore result and LINE text.
+
+For example, a valid token holder could submit a fabricated nonblank score
+string saying a different 9Q/8Q total or risk level, or a string unrelated
+to the assessment. The backend would still save and push that string if
+external operations succeed. This affects integrity of that verified user's
+stored result and message; the code does not show a way to redirect it to
+another user by adding a user_id field. The result document is written with
+set() at a key derived from sub, so a later accepted submission can replace
+the previous result for that same identity. Backend token verification
+authenticates the sender identity; it does not attest to the assessment
+answers, calculated score, or report wording.
+
+3. MINIMAL FIX OPTIONS (PROPOSALS; NONE IMPLEMENTED)
+----------------------------------------------------
+Option A — Submit structured answers; backend recomputes and renders result.
+Files: templates/index.html and app.py, plus local mock tests when implemented.
+Request: replace score text with 2Q answers and the reached 9Q/8Q arrays;
+backend validates exact array lengths, integer types (excluding booleans),
+allowed answer values, and branch completeness, then applies the frozen
+transitions/weights/thresholds and constructs the canonical report.
+Firestore: keep results/<verified sub> and the existing {"result": string}
+field; LINE push uses that same server-generated string. No schema migration
+is required. Backward compatibility: old score-only requests must be
+rejected, so frontend/backend deployment must be coordinated; a cached old
+LIFF page may receive 400 until refreshed. Complexity: medium, because the
+frozen rules/report formatting must be ported and parity-tested. LIFF risk:
+moderate during rollout, low after parity tests; visible UX need not change.
+Integrity strength: strong for deterministic score/report consistency from
+submitted answers, but it cannot prove the user answered truthfully.
+
+Option B — Submit answers plus client result; backend recomputes and compares.
+Files: templates/index.html and app.py, plus tests. Request: structured
+answers plus existing score report string. Backend validates and recomputes;
+rejects mismatch (400), and uses the server-generated report for storage and
+push. Firestore schema can remain unchanged. Backward compatibility: old
+score-only requests still need rejection to close the issue. Complexity:
+medium to high because exact report formatting must stay synchronized in
+both languages. LIFF risk: higher than A when harmless formatting differences
+cause mismatches. Integrity strength: strong only if the backend uses its
+own recomputed result; accepting the client string after a loose comparison
+would weaken it.
+
+Option C — Move answer submission through a server-owned assessment session.
+Files: app.py and templates/index.html, likely additional session storage.
+Request: each step/answer references a server session; the backend validates
+progression and produces the final report. Firestore result schema could stay
+unchanged, but session storage/lifecycle would be new. Backward compatibility:
+old clients require a coordinated cutover. Complexity: high; UI/network and
+session failure handling change substantially. LIFF risk: high. Integrity
+strength: stronger for completion/progression evidence, though still unable
+to prove honest human answers. This is beyond the minimal scope.
+
+4. RECOMMENDED MINIMAL SAFE DESIGN (OPTION A)
+---------------------------------------------
+Make the backend the source of truth for the computed result. Keep current
+LIFF questions and screens; change only the final submission to send answer
+arrays rather than a report string. Derive the completed branch from answers
+on the backend; do not trust a submitted stepFinished, numeric score, risk
+label, or report text. Keep the verified LINE sub identity and save/push
+partial-success contract unchanged. Render the server-generated report with
+the current wording, preserving the Firestore {"result": string} shape.
+The browser can continue to show its existing preview, but it is not the
+authoritative stored or pushed result.
+
+Proposed request shape (illustrative, not the current API):
+  2Q-only: {"answers2Q": [0, 0]}
+  9Q path: {"answers2Q": [0, 1], "answers9Q": [0, 0, 0, 0, 0, 0, 0, 0, 0]}
+  8Q path: {"answers2Q": [0, 1], "answers9Q": [<nine 0..3 values>],
+            "answers8Q": [<eight 0..1 values>]}
+  Header: Authorization: Bearer <LIFF ID token>.
+
+The examples show shape only; branch validity must follow the current
+frozen rule. Omit answer arrays for branches not reached. Strictly reject
+missing/incomplete/malformed arrays and unexpected client result fields
+(score, finalReport, risk level), rather than silently falling back to the
+old score-only path. Return 400 with saved=false/pushed=false before any
+Firestore save or LINE push. Retain 401 for invalid/missing token, 503 for
+LINE verification outage, and existing 200/500/502 save/push meanings.
+Avoid logging raw answers, reports, or ID tokens in tests or production.
+
+5. LOCAL / MOCK TEST PLAN FOR THE RECOMMENDED FIX
+------------------------------------------------
+No tests below were executed in this analysis-only task.
+- Valid 2Q-only, 9Q-complete, and 8Q-complete submissions: with mocked LINE
+  verification, assert canonical report matches frozen client behavior;
+  assert save_result and push_message receive the verified sub and the same
+  server-generated text. Assert 200, saved=true, pushed=true.
+- Tampered score/result/summary/risk text: send an extra conflicting client
+  report field; assert 400 (or explicitly ignored by a documented strict
+  schema), no save/push, and no client string becomes authoritative. The
+  recommended strict schema rejects these fields.
+- Missing answers: no 2Q, or an omitted required 9Q/8Q array for the
+  computed branch; assert 400 and no save/push.
+- Malformed answers: wrong JSON type, wrong array length, null element,
+  string/float/boolean element, or a branch-inconsistent extra array;
+  assert 400 and no save/push.
+- Out-of-range answers: 2Q/8Q outside 0..1 or 9Q outside 0..3; assert 400
+  and no save/push.
+- Mismatched client result: extra score text disagrees with answers; assert
+  strict rejection. If Option B is chosen instead, assert mismatch 400 and
+  matching data still stores only the backend-generated report.
+- Valid token: mock LINE verification response with sub and assert it is the
+  only identity used. Invalid/missing token: mock 401/invalid response and
+  assert no save/push. Mock verification timeout and assert 503.
+- Firestore save success/failure: mock save_result; assert push occurs only
+  after success, with 200 or 500 and correct saved/pushed JSON flags.
+- LINE push success/failure: mock push_message after successful save; assert
+  200 both true or 502 saved=true/pushed=false; no whole-request retry after
+  confirmed save.
+- Boundary parity: use fixed answer fixtures for each existing transition
+  and text category to compare backend-generated report with the current
+  browser output. This checks equivalence without changing the frozen rules.
+
+6. MIGRATION AND LIMITS
+----------------------
+Deploy frontend and backend changes together. Old tabs or cached LIFF HTML
+may still send {"score": ...}; returning 400 is intentional until reload.
+Accepting old score-only payloads indefinitely would preserve the integrity
+issue. The recommendation does not change the separate risks of duplicate
+requests or push timeout ambiguity. Server recomputation protects the
+reported calculation from request-body tampering, not the truthfulness of
+the user's answers or the clinical validity of the frozen assessment rules.
+
+Files inspected: app.py; templates/index.html.
+Exact current /send request body: {"score": finalReport}.
+Recommended minimal solution: Option A, backend recomputation from validated
+structured answers with the existing verified LINE sub and result schema.
+Analysis only: no implementation, retraining, commit, push, or deployment.

@@ -1,0 +1,88 @@
+SAFETY NEGATION FINAL MINIMAL FIX — 2026-09-30
+=============================================
+
+Scope: A5 lexical false negative in the explicit phrase matcher only. This is a
+19-case synthetic rule regression, not clinical validation or an ML evaluation.
+
+1. A5 AND ROOT CAUSE
+--------------------
+Source: evaluation/safety_negation_analysis.txt and
+evaluation/safety_negation_fix.txt.
+Exact A5 text: ฉันคิดจะจบชีวิตตัวเอง
+Expected explicit_safety: true.
+Original substring matcher: false. Previous detect_explicit_safety(): false.
+Cause: none of the previous nine configured phrase literals occurred in A5, so
+the helper returned false before reaching its clear-negation check.
+
+2. MINIMAL CODE CHANGE
+----------------------
+Added the single literal "คิดจะจบชีวิตตัวเอง" to explicit_safety_phrases in
+app.py:detect_explicit_safety(). The helper structure, narrow whole-statement
+negation exclusion, handle_message() call, ML inference, labels, thresholds,
+response text, and final explicit_safety OR risk_is_high OR intent_is_crisis
+condition were not changed in this task. No dependency was added.
+
+3. ORIGINAL / PREVIOUS / FINAL 19-CASE MATRIX
+---------------------------------------------
+Original and previous values come from the two reports above. Final values
+were computed from the current helper function extracted from app.py with
+Python AST, without importing the application. Expected values concern only
+the rule-based explicit matcher; "review" means retain a conservative true
+result. B4 and C1-C4 are accepted conservative matches, not newly introduced
+regressions.
+
+ID | category | original | previous | final | expected | final result
+A1 | positive | true | true | true | true | PASS
+A2 | positive | true | true | true | true | PASS
+A3 | positive | true | true | true | true | PASS
+A4 | positive | true | true | true | true | PASS
+A5 | positive | false | false | true | true | PASS
+B1 | clear_negation | true | false | false | false | PASS
+B2 | clear_negation | true | false | false | false | PASS
+B3 | clear_negation | true | false | false | false | PASS
+B4 | clear_negation | true | true | true | false | ACCEPTED CONSERVATIVE MATCH
+B5 | clear_negation | true | false | false | false | PASS
+B6 | clear_negation | true | false | false | false | PASS
+C1 | context_third_person | true | true | true | false | ACCEPTED CONSERVATIVE MATCH
+C2 | context_quoted | true | true | true | false | ACCEPTED CONSERVATIVE MATCH
+C3 | context_informational | true | true | true | false | ACCEPTED CONSERVATIVE MATCH
+C4 | context_reported_question | true | true | true | false | ACCEPTED CONSERVATIVE MATCH
+D1 | mixed_temporal | true | true | true | review | PASS
+D2 | mixed_ambiguous | true | true | true | review | PASS
+D3 | mixed_current_thought | true | true | true | true | PASS
+D4 | mixed_boundary | true | true | true | review | PASS
+
+False positives: original 10; after previous fix 5; after final fix 5.
+False negatives: original 1; after previous fix 1; after final fix 0.
+Final: 14 PASS, 5 ACCEPTED CONSERVATIVE MATCH, 0 unaccepted FAIL.
+A1-A5 all trigger. B1-B3 and B5-B6 remain false. D1-D4 remain true.
+Every result except A5 matches the previous helper's result.
+
+4. SAFETY-CONDITION REGRESSION
+------------------------------
+The AST test found exactly one explicit_safety OR risk_is_high OR
+intent_is_crisis expression and evaluated these independent combinations:
+- explicit_safety=true, other two false: crisis condition true — PASS.
+- risk_is_high=true, other two false: crisis condition true — PASS.
+- intent_is_crisis=true, other two false: crisis condition true — PASS.
+- all three false: crisis condition false — PASS.
+No LINE, Firebase, or ML service was called.
+
+5. ACCEPTED CONSERVATIVE CASES AND LIMITATIONS
+-----------------------------------------------
+- B4 (double negation) and C1-C4 (third-person, quoted, informational, and
+  reported-question contexts) still trigger because the helper only excludes
+  a small set of complete, clear denials. These five are accepted for this
+  final minimal change; they remain false positives against the narrow
+  self-directed expected values in the synthetic matrix.
+- The added literal closes only the A5 wording gap. Other phrasings, including
+  a negated longer statement containing this literal, may still trigger.
+- A helper result of false is not a judgment that a person is safe. The two
+  independent ML safety paths remain in the final OR condition.
+- The 19 synthetic cases do not establish real-world clinical performance.
+
+6. FILES / EXECUTION
+--------------------
+Changed in this task: app.py (one phrase literal) and this new report.
+No dataset, model artifact, other evaluation file, ai_model.py, or template
+was edited in this task. No retraining, commit, push, or deployment occurred.

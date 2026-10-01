@@ -1,0 +1,43 @@
+SHOULD FIX S-09 — CLI RAW INPUT OUTPUT CLEANUP
+Date: 2026-10-01
+Scope: ai_model.py CLI/debug output only
+
+1. ORIGINAL RAW INPUT OUTPUT
+display_prediction() in ai_model.py printed `text` verbatim in the
+`Input` section (line 289 before this change). run_cli() obtained a line
+through input("Input: ") and passed it to display_prediction(), so a
+developer CLI prediction printed the entered text again in stdout.
+No Flask request path calls display_prediction().
+
+2. CODE CHANGED
+Replaced the one print statement with a generic `Input received` line.
+The function still calls predict_all(text), returns None, and prints all
+six prediction labels and confidence values. No prediction, training,
+artifact loading, tokenizer, threshold, or model setting was changed.
+The input() prompt remains; a terminal may itself display typed input.
+This fix removes the additional echo from display_prediction().
+
+3. TESTS AND RESULTS
+Tests extracted only display_prediction() and run_cli() from the current
+source via AST. predict_all() and CLI input() were mocked, and stdout was
+captured. No ai_model.py import, model load/write, training, or external
+service call occurred.
+
+A. display_prediction() calls predict_all() with the input: PASS.
+B. Output contains Risk, Emotion, Problem, Support Need, Intent, and
+   Conversation Style: PASS.
+C. All six confidence values remain formatted to three decimals: PASS.
+D. Synthetic raw input string is absent from stdout: PASS.
+E. run_cli() option 2 reaches prediction and returns to the menu: PASS.
+F. Both calls complete without a new exception: PASS.
+
+The first test harness attempt used an incorrect mocked confidence key
+(`support_need_conf`); the mock was corrected to the existing API key
+(`support_conf`), and the full A-F test then passed. No source change was
+needed for that test-harness error.
+
+4. BEHAVIOR AND FILES
+Prediction behavior and return values are unchanged. Files changed in
+this task: ai_model.py and this new report. Existing evaluation files,
+app.py, templates/index.html, dataset/, and models/ were not changed.
+No retraining, commit, push, or deployment occurred.

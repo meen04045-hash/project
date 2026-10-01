@@ -1,0 +1,181 @@
+FINAL MUST-FIX CLOSURE VERIFICATION — 2026-10-01
+================================================
+
+Scope: verify and test the current working tree only. No application code,
+dataset, model artifact, or existing evaluation file was edited. No model
+training, commit, push, deployment, or real LINE/Firebase call occurred.
+Tests used Python AST-extracted source with mocks, Flask test client, and
+the active LIFF JavaScript in a Node VM. This is engineering verification,
+not clinical validation or proof of production service availability.
+
+FINAL VERDICT: ALL MUST FIX CLOSED (for the inspected code and local/mock tests)
+Real Render runtime/artifact loading and LINE/LIFF/Firestore E2E remain
+unverified operational gates before claiming a live deployment is verified.
+
+1. MUST FIX #1 — MODEL STARTUP SAFETY: CLOSED
+--------------------------------------------
+Current ai_model.py:get_model() loads existing model/vectorizer files only
+when force_train=False. Missing model or vectorizer raises FileNotFoundError
+with the artifact name and advance-training guidance. A mocked joblib.load
+failure raises RuntimeError from the original exception; the top-level
+message does not print the mocked sensitive path. This serving path did
+not call train_model(), joblib.dump(), or directory creation in tests.
+force_train=True still invokes explicit train_model() and two dump calls;
+these were mocked, so no real training or artifact write occurred.
+The six import-time get_model() assignments were executed in isolation
+against mock paths: 12/12 mocked loads succeeded with zero train/dump.
+All 12 expected real .joblib files exist in models/; they were NOT loaded
+by this closure test. predict_all(msg) was run with a mocked inference
+function: all six tasks were called and its 12 response keys retained.
+
+2. MUST FIX #2 — EXPLICIT SAFETY MATCHER: CLOSED
+------------------------------------------------
+The original 19-case matrix in evaluation/safety_negation_analysis.txt was
+rerun against current app.py:detect_explicit_safety(). Final false
+negatives = 0; false positives = 5. A1-A5 positive cases all triggered.
+B1-B3 and B5-B6 clear denials did not trigger. D1-D4 mixed/ambiguous
+cases remained conservative (true). B4 and C1-C4 remained true as the
+previously accepted conservative matches; they account for the 5 false
+positives against the matrix's narrow self-directed expectation.
+The exact final condition explicit_safety OR risk_is_high OR
+intent_is_crisis passed all four independent truth-table checks. Risk and
+intent thresholds were unchanged against Git HEAD. A false explicit
+result is not a declaration that the person is safe: both ML paths remain.
+
+3. MUST FIX #3 — SERVER-AUTHORITATIVE ASSESSMENT: CLOSED
+-------------------------------------------------------
+templates/index.html sends structured answers_2q/answers_9q/answers_8q
+with a LIFF ID token in the Bearer header. It does not submit finalReport,
+score, risk level, or user_id. app.py validates exact fields, list lengths,
+integer values/ranges, and the frozen 2Q→9Q→8Q branch consistency. It
+rejects invalid, old score-only, extra result, or extra user_id payloads
+with JSON 400 saved=false/pushed=false before verify/save/push.
+The backend then builds the report from answers. save_result() receives
+the backend report and verified LINE sub; LINE push uses the same report
+and verified sub. The existing results/<sub> {result: text} shape and
+200/500/502 saved/pushed partial-success contract are unchanged.
+The browser still builds finalReport for preview, but /send does not trust
+or read it. A client can submit fabricated answers, but cannot make a
+client-composed score/result string authoritative through the current API.
+
+4. REGRESSION TEST RESULTS (MOCK/LOCAL ONLY)
+-------------------------------------------
+A. Model import/load path: PASS — six startup assignments, 12 mocked
+   artifact loads; missing model/vectorizer and corrupt load failed with
+   no implicit training or overwrite. Real artifact presence 12/12.
+B. predict_all interface: PASS — one msg argument, six mocked inference
+   calls and the original 12 keys/label-confidence mapping.
+C. /callback signature: PASS — missing, empty, whitespace, and invalid
+   signatures returned 400; valid mocked signature returned 200. Handler
+   was not called for missing/blank signatures.
+D. Safety matrix: PASS under accepted criteria — 19 cases, FN=0, FP=5;
+   B4/C1-C4 are accepted conservative matches.
+E. Safety OR regression: PASS 4/4; risk/intent thresholds unchanged.
+F. Valid 2Q-only: PASS — backend-generated report saved and pushed.
+G. Valid 2Q→9Q: PASS — backend-generated report saved and pushed.
+H. Valid 2Q→9Q→8Q: PASS — both total and item-9 entry paths tested.
+I. Invalid/malformed answers: PASS — missing/null/wrong type/count,
+   boolean, string, negative, and out-of-range inputs rejected with 400;
+   no verify/save/push for invalid payloads.
+J. Inconsistent flow: PASS — prohibited or missing 9Q/8Q arrays rejected.
+K. Old {"score":"..."}: PASS — 400 and no verify/save/push.
+L. Client user_id override: PASS — extra field rejected with 400; valid
+   submissions save/push only to mocked LINE-verified sub.
+M. Firestore failure contract: PASS — 500 saved=false/pushed=false and
+   no LINE push after save failure.
+N. LINE push failure contract: PASS — 502 saved=true/pushed=false after
+   confirmed save.
+O. LIFF Bearer request: PASS — getIDToken() value sent in Bearer header
+   with same-origin /send and structured answers.
+P. Duplicate-click prevention: PASS — only one fetch while first
+   request remains pending; failure re-enables button, success and
+   confirmed partial success keep it disabled.
+Q. LIFF init failure/retry: PASS — failure shows error view rather than
+   welcome/assessment, with no welcome timer; retry button invokes reload.
+   Success initializes and opens welcome after the existing timer.
+
+Test totals: Flask test client 5 callback signature cases + 32 /send
+cases passed. Node VM LIFF behavior checks passed. Seven representative
+frontend reports matched backend-generated strings exactly (2Q, 9Q,
+8Q total/item-9 entry, and 8Q low/medium/high cases).
+The first model/safety test-harness invocation stopped before assertions
+because its generated AST lacked lineno metadata. The harness was fixed
+in memory and rerun successfully; this was not an application test failure.
+
+5. INTEGRATION COMPATIBILITY AND CURRENT DIFF AUDIT
+---------------------------------------------------
+- Only ai_model.py, app.py, and templates/index.html were inspected for
+  current code differences. No code was changed during this verification.
+- Current ai_model.py diff is the get_model startup safety fix. Static AST
+  comparison with Git HEAD found create_vectorizer(), create_classifier(),
+  train_model(), train_all_models(), and predict_all() unchanged.
+- Frontend submit2Q(), submit9Q(), submit8Q(), get9QText(), get8QText(),
+  Q9 and Q8 definitions match Git HEAD. generateReport() differs only by
+  bookkeeping for the completed step; current report text matched backend
+  text in the local parity cases.
+- All six app.py ML thresholds matched Git HEAD. The safety OR expression
+  was unchanged. app.py console print calls contain exception class names,
+  not raw user messages, assessment result strings, tokens, or credentials.
+  Active template console errors use fixed messages. ai_model.py's separate
+  developer CLI still echoes entered text; it is not on Flask import or
+  request paths and remains SHOULD FIX S-09.
+- LINE secret/access token and Firebase JSON are read from environment
+  variables in the inspected application code. The literal LIFF ID is
+  non-secret configuration; no credential value was printed or inspected.
+- `git diff --name-only -- dataset models` returned empty. Existing
+  untracked augmentation files remain in the workspace and were untouched.
+  No tracked model/dataset diff was introduced.
+
+6. REMAINING SHOULD FIX ITEMS (FROM FINAL SYSTEM AUDIT)
+--------------------------------------------------------
+S-01 user_state grows and stored emotion/problem values are unused.
+S-02 /send retries and push timeouts lack backend idempotency/reconciliation.
+S-03 duplicate LINE webhook events lack deduplication.
+S-04 Firestore chat_logs/results retention, timestamp, and live IAM/Rules
+     require a separate privacy/operations review.
+S-05 repository-root index.html is stale relative to active template.
+S-06 legacy LINE SDK API migration remains separate work.
+S-07 chosen Render Python runtime and joblib artifact compatibility remain
+     unverified on the actual target deployment.
+S-08 synchronous webhook processing/reply error behavior needs live
+     latency/failure observation.
+S-09 developer CLI can print entered text; keep real user data out of CLI.
+None of these items was changed in this verification round.
+
+7. ACCEPTED LIMITATIONS
+-----------------------
+- Safety matcher still conservatively triggers B4/C1-C4; the 19-case
+  matrix is synthetic and is not a clinical sensitivity estimate.
+- Server recomputation validates answers and report consistency, not the
+  honesty of the answers or completion through the visible UI.
+- The old score-only LIFF request is intentionally rejected. Cached older
+  pages need reload after a coordinated frontend/backend deployment.
+- Text-only webhook coverage, latest-result-only Firestore semantics, and
+  project-level (non-clinical) ML annotations remain as described in the
+  final system audit.
+- Model files were checked for presence, not actually unpickled in this
+  closure round. Mock tests cannot establish target-runtime compatibility.
+
+8. BLOCKERS / UNVERIFIED GATES BEFORE FINAL SUBMISSION
+------------------------------------------------------
+No local/mock MUST FIX regression or source-code blocker was found.
+Before claiming a live deployment is verified, confirm all 12 artifacts
+load under the actual Render Python/dependency environment, deploy the
+coordinated frontend/backend version, and complete the manual real-service
+LINE/LIFF/Firestore checklist. The reported Render service was suspended
+and on an older commit in the earlier audit; its current live state was
+not checked here. These operational checks are pending, not claimed PASS.
+
+9. FILES INSPECTED
+------------------
+ai_model.py; app.py; templates/index.html;
+evaluation/final_system_audit.txt;
+evaluation/model_startup_safety_fix.txt;
+evaluation/safety_negation_analysis.txt;
+evaluation/safety_negation_final_fix.txt;
+evaluation/server_authoritative_assessment_fix.txt;
+names/presence of the 12 models/*.joblib files; Git HEAD versions of
+ai_model.py, app.py, and templates/index.html; tracked dataset/model diff.
+No .env, service-account content, raw credential, or live user data was read.
+
+FINAL VERDICT: ALL MUST FIX CLOSED (local/mock code verification)

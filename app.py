@@ -1,4 +1,5 @@
 import random
+import re
 
 import firebase_admin
 import os
@@ -364,15 +365,84 @@ def index():
 # RECEIVE FROM LIFF
 # =====================================
 
+def validate_assessment_answers(data):
+    if not isinstance(data, dict) or set(data) != {"answers_2q", "answers_9q", "answers_8q"}:
+        raise ValueError("Invalid assessment payload")
+
+    answers_2q = data["answers_2q"]
+    answers_9q = data["answers_9q"]
+    answers_8q = data["answers_8q"]
+
+    def valid_answers(answers, count, maximum):
+        return (isinstance(answers, list) and len(answers) == count
+                and all(type(answer) is int and 0 <= answer <= maximum for answer in answers))
+
+    if not valid_answers(answers_2q, 2, 1):
+        raise ValueError("Invalid 2Q answers")
+    if not isinstance(answers_9q, list) or not isinstance(answers_8q, list):
+        raise ValueError("Invalid assessment answers")
+
+    if sum(answers_2q) == 0:
+        if answers_9q or answers_8q:
+            raise ValueError("Invalid 2Q flow")
+    else:
+        if not valid_answers(answers_9q, 9, 3):
+            raise ValueError("Invalid 9Q answers")
+        needs_8q = sum(answers_9q) >= 7 or answers_9q[8] >= 1
+        if needs_8q:
+            if not valid_answers(answers_8q, 8, 1):
+                raise ValueError("Invalid 8Q answers")
+        elif answers_8q:
+            raise ValueError("Invalid 9Q flow")
+
+    return answers_2q, answers_9q, answers_8q
+
+
+def build_assessment_result(answers_2q, answers_9q, answers_8q):
+    if sum(answers_2q) == 0:
+        return "📋 ผลการประเมินสุขภาพจิตของคุณ\n\n• แบบประเมินคัดกรอง 2Q: ปกติ 😊"
+
+    score_9q = sum(answers_9q)
+    if score_9q < 7:
+        text_9q = "ไม่มีภาวะซึมเศร้า หรือมีระดับน้อยมาก"
+    elif score_9q <= 12:
+        text_9q = "มีภาวะซึมเศร้า ระดับน้อย"
+    elif score_9q <= 18:
+        text_9q = "มีภาวะซึมเศร้า ระดับปานกลาง"
+    else:
+        text_9q = "มีภาวะซึมเศร้า ระดับรุนแรง"
+
+    if not answers_8q:
+        return (f"📋 ผลการประเมินสุขภาพจิตของคุณ\n\n• คะแนนรวม 9Q: {score_9q} / 27 คะแนน\n"
+                f"• ผลการประเมิน: {text_9q}")
+
+    weights_8q = (1, 2, 6, 8, 9, 4, 10, 4)
+    score_8q = sum(weight for answer, weight in zip(answers_8q, weights_8q) if answer == 1)
+    if score_8q == 0:
+        text_8q = "ระดับน้อยมาก"
+    elif score_8q <= 8:
+        text_8q = "ระดับน้อย"
+    elif score_8q <= 16:
+        text_8q = "ระดับปานกลาง"
+    else:
+        text_8q = "ระดับรุนแรง"
+
+    return (f"📋 ผลการประเมินสุขภาพจิตของคุณ\n\n"
+            f"• คะแนนรวม 9Q: {score_9q} / 27 คะแนน ({text_9q})\n"
+            f"• คะแนนความเสี่ยง 8Q: {score_8q} / 44 คะแนน ({text_8q})")
+
+
 @app.route("/send", methods=["POST"])
 def send():
 
     data = request.get_json(silent=True)
 
-    if not isinstance(data, dict):
+    try:
+        answers = validate_assessment_answers(data)
+    except ValueError:
         return jsonify(saved=False, pushed=False), 400
 
-    text = str(data.get("score"))
+    text = build_assessment_result(*answers)
 
     authorization = request.headers.get("Authorization", "")
     scheme, separator, id_token = authorization.partition(" ")
@@ -412,7 +482,7 @@ def send():
 
     except Exception as e:
 
-        print("SAVE ERROR :", e)
+        print("SAVE ERROR :", type(e).__name__)
 
         return jsonify(saved=False, pushed=False), 500
 
@@ -429,7 +499,7 @@ def send():
 
     except Exception as e:
 
-        print("PUSH ERROR :", e)
+        print("PUSH ERROR :", type(e).__name__)
 
         return jsonify(saved=True, pushed=False), 502
 
@@ -465,11 +535,31 @@ def callback():
     return "OK"
 
 
-# =====================================
-# MEMORY
-# =====================================
+def detect_explicit_safety(text: str) -> bool:
+    text_lower = text.strip().lower()
+    explicit_safety_phrases = [
+        "อยากตาย",
+        "ฆ่าตัวตาย",
+        "คิดฆ่าตัวตาย",
+        "คิดจะจบชีวิตตัวเอง",
+        "อยากทำร้ายตัวเอง",
+        "ทำร้ายตัวเอง",
+        "ไม่อยากมีชีวิต",
+        "ไม่อยากมีชีวิตอยู่",
+        "ไม่อยากมีชีวิตอยู่แล้ว",
+        "ไม่อยากอยู่แล้ว"
+    ]
+    if not any(phrase in text_lower for phrase in explicit_safety_phrases):
+        return False
 
-user_state = {}
+    # Only a complete, clear denial is excluded; mixed statements still trigger.
+    compact_text = "".join(text_lower.split()).rstrip(".,!?！？。")
+    clear_negation = re.fullmatch(
+        r"(?:ฉัน|ผม|หนู)?(?:ตอนนี้)?(?:ไม่ได้|ไม่)"
+        r"(?:อยากตาย|คิดฆ่าตัวตาย|อยากทำร้ายตัวเอง)(?:แล้ว)?",
+        compact_text
+    )
+    return clear_negation is None
 
 
 # =====================================
@@ -484,14 +574,6 @@ def handle_message(event):
 
     user_id = event.source.user_id
     text = event.message.text.strip()
-
-    # =================================
-    # CREATE MEMORY
-    # =================================
-
-    if user_id not in user_state:
-
-        user_state[user_id] = {}
 
     # =================================
     # OPEN LIFF
@@ -603,10 +685,6 @@ def handle_message(event):
     intent = result["intent"]
     style = result["conversation_style"]
 
-    print("\n========== AI RESULT ==========")
-    print(result)
-
-
     # =================================
     # SAVE LOG
     # =================================
@@ -627,17 +705,8 @@ def handle_message(event):
 
         print(
             "LOG ERROR:",
-            e
+            type(e).__name__
         )
-
-
-    # =================================
-    # SAVE MEMORY
-    # =================================
-
-    user_state[user_id]["emotion"] = emotion
-
-    user_state[user_id]["problem"] = problem
 
 
     # =================================
@@ -693,38 +762,7 @@ def handle_message(event):
     # เพราะอาจทำให้เกิด False Positive
     #
 
-    explicit_safety_phrases = [
-
-        "อยากตาย",
-
-        "ฆ่าตัวตาย",
-
-        "คิดฆ่าตัวตาย",
-
-        "อยากทำร้ายตัวเอง",
-
-        "ทำร้ายตัวเอง",
-
-        "ไม่อยากมีชีวิต",
-
-        "ไม่อยากมีชีวิตอยู่",
-
-        "ไม่อยากมีชีวิตอยู่แล้ว",
-
-        "ไม่อยากอยู่แล้ว"
-    ]
-
-
-    text_lower = text.lower()
-
-
-    explicit_safety = any(
-
-        phrase in text_lower
-
-        for phrase in explicit_safety_phrases
-
-    )
+    explicit_safety = detect_explicit_safety(text)
 
 
     # =================================
@@ -750,32 +788,6 @@ def handle_message(event):
 
         and result["intent_conf"] >= INTENT_CRISIS_THRESHOLD
 
-    )
-
-
-    # =================================
-    # SAFETY DEBUG
-    # =================================
-
-    print(
-        "========== SAFETY CHECK ==========",
-        {
-            "text": text,
-
-            "explicit_safety": explicit_safety,
-
-            "risk": risk,
-
-            "risk_conf": result["risk_conf"],
-
-            "risk_is_high": risk_is_high,
-
-            "intent": intent,
-
-            "intent_conf": result["intent_conf"],
-
-            "intent_is_crisis": intent_is_crisis
-        }
     )
 
 

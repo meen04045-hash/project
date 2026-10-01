@@ -182,16 +182,20 @@ def train_model(csv_path: str | Path, display_name: str = "model", artifact_name
 
 
 def get_model(name: str, csv_path: str, force_train: bool = False, display_name: str | None = None) -> tuple[TfidfVectorizer, CalibratedClassifierCV]:
-    """Load an existing pair, or train, evaluate, and save it when required."""
-    MODELS_DIR.mkdir(parents=True, exist_ok=True)
+    """Load an existing pair, or train only when explicitly requested."""
     model_path = MODELS_DIR / f"{name}_model.joblib"
     vectorizer_path = MODELS_DIR / f"{name}_vectorizer.joblib"
-    if not force_train and model_path.exists() and vectorizer_path.exists():
+    if not force_train:
+        if not model_path.is_file():
+            raise FileNotFoundError(f"Missing {name} model artifact; train artifacts in advance.")
+        if not vectorizer_path.is_file():
+            raise FileNotFoundError(f"Missing {name} vectorizer artifact; train artifacts in advance.")
         try:
             return joblib.load(vectorizer_path), joblib.load(model_path)
         except Exception as error:
-            print(f"Error loading serialized {name} model: {error}. Re-training...")
+            raise RuntimeError(f"Unable to load {name} artifacts; train artifacts in advance.") from error
 
+    MODELS_DIR.mkdir(parents=True, exist_ok=True)
     model_name = display_name or name
     vectorizer, model, _ = train_model(csv_path, model_name, name)
     joblib.dump(vectorizer, vectorizer_path)
@@ -282,7 +286,7 @@ def display_prediction(text: str) -> None:
     result = predict_all(text)
     rows = (("Risk", "risk", "risk_conf"), ("Emotion", "emotion", "emotion_conf"), ("Problem", "problem", "problem_conf"), ("Support Need", "support_need", "support_conf"), ("Intent", "intent", "intent_conf"), ("Conversation Style", "conversation_style", "style_conf"))
     print("\n" + "=" * 50 + "\nPrediction Result\n" + "=" * 50)
-    print(f"\nInput\n{text}\n\n" + "-" * 50)
+    print("\nInput received\n" + "-" * 50)
     for label, value_key, confidence_key in rows:
         print(f"{label:<20} : {str(result[value_key]):<20} ({result[confidence_key]:.3f})")
     print("=" * 50)

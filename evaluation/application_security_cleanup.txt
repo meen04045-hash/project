@@ -1,0 +1,60 @@
+APPLICATION / SECURITY CLEANUP
+==============================
+Scope: app.py and templates/index.html only; this record is evaluation/application_security_cleanup.txt.
+Risk ML, datasets, frozen evaluation artifacts, models, Firestore schema, and assessment scoring flow were not changed.
+
+1. SENSITIVE LOGGING FOUND
+--------------------------
+- app.py previously printed the entire predict_all result for each chat message. The current predict_all output contains prediction labels and confidences rather than raw message text, but a full per-user mental-health inference dump is unnecessary and fragile if that result structure expands.
+- app.py previously printed risk, intent, confidences, and safety flags for each chat message. These are sensitive derived data, even though the raw message had already been removed in an earlier change.
+- templates/index.html previously passed LIFF initialization and fetch exception objects to console.error. SDK/network error details were not needed for the user flow and could expose sensitive context if an error object includes it.
+- No current app.py print call directly printed raw chat text before this cleanup. The Firestore chat_logs write still stores raw text by design; it is not console logging and was not changed. The callback request body is read for signature handling but not logged.
+
+2. CHANGES MADE
+---------------
+- app.py: removed the full AI result print and the per-message safety debug print. Prediction and safety decisions still execute with the same variables and thresholds.
+- templates/index.html: changed the two console.error calls to fixed status strings. Catch handlers no longer pass exception objects to the console. LIFF error screen, fetch recovery, alerts, and send behavior are unchanged.
+- Existing app.py error prints for SAVE, PUSH, and chat log failures retain only the exception class name; they do not print exception messages, request bodies, tokens, raw text, or full LINE user IDs.
+- No assessment 2Q -> 9Q -> 8Q scoring logic was edited.
+
+3. CHECKED AND LEFT UNCHANGED
+-----------------------------
+- /send: missing score, null, empty string, whitespace-only string, and non-string values return JSON saved=false, pushed=false with HTTP 400 before LINE verify, save_result, or push_message. Valid score behavior was left unchanged.
+- LIFF init failure: catch path shows view-liff-error, does not schedule the normal welcome transition, and the retry button calls window.location.reload(). UI layout was not redesigned.
+- LINE identity: frontend calls liff.getIDToken(), sends Authorization: Bearer <token>, and does not send userId in the request body. Backend POSTs id_token and LINE_LOGIN_CHANNEL_ID as client_id to https://api.line.me/oauth2/v2.1/verify and uses verified sub as user_id for save/push. A client-supplied userId is not trusted. This endpoint and request shape match the LINE Login v2.1 API reference (https://developers.line.biz/en/reference/line-login/). The LIFF openid scope required for getIDToken is documented by LINE (https://developers.line.biz/en/reference/liff); the channel configuration itself was not checked by these local tests.
+- /callback: missing or whitespace-only X-Line-Signature is rejected with HTTP 400 before handler.handle. Invalid signatures are also rejected. Event handling was not changed.
+- app.py debug=False remains unchanged. No code explicitly logs a callback body, Authorization header, ID token, access token, service account data, or full LINE user ID.
+- Existing partial-success /send responses and retry behavior were not changed.
+
+4. TESTS RUN
+------------
+- Python AST parse of app.py and scan of print-call arguments for raw text, result, user ID, token, authorization, or callback body variables.
+- Flask test client with extracted current /send and /callback functions and mocked LINE/Firestore boundaries; no external service was called.
+- /send invalid-score cases: missing, null, empty, whitespace-only, number, boolean, list, object. Asserted HTTP 400 JSON and zero verify/save/push calls.
+- /send valid identity: mocked LINE verify response returned sub; asserted save/push use verified sub despite a forged client userId. Also tested missing token -> 401, invalid token -> 401, verify timeout -> 503.
+- /send save and push failures: asserted existing 500/502 JSON behavior and that exception messages containing sentinel private text/token did not appear in captured logs.
+- /callback: missing, empty, valid, and invalid signature cases; missing/empty cases did not call handler.handle.
+- JavaScript syntax and mocked sendToBot(): asserted Bearer token, score-only JSON body, success and network-failure behavior, and that sensitive sentinel text in thrown errors is not logged.
+- Mocked initLIFF() failure: asserted error screen, no welcome timer, and reload retry markup.
+- git diff --check -- app.py templates/index.html: passed; Git emitted only a line-ending normalization warning for templates/index.html.
+
+5. TEST RESULTS AND LIMITS
+--------------------------
+All local checks above passed. No live LINE Login, LIFF channel setting, Firestore, or production deployment was exercised. These tests verify local code behavior with mocked external boundaries, not end-to-end service availability.
+
+6. FILES CHANGED IN THIS CLEANUP
+--------------------------------
+- app.py
+- templates/index.html
+- evaluation/application_security_cleanup.txt (this report)
+app.py and templates/index.html already had uncommitted changes before this cleanup; this round only removed sensitive console output and replaced exception-object console logging. Frozen Risk ML, dataset, and evaluation files were not edited; the requested cleanup report is the sole new evaluation file for this round.
+
+7. REMAINING RISKS — REPORTED ONLY, NOT CHANGED
+------------------------------------------------
+- Duplicate /send retry and missing backend idempotency.
+- Duplicate LINE webhook events.
+- Client-authoritative score/finalReport content.
+- Push timeout ambiguity after a successful save.
+- Verify endpoint error mapping.
+- user_state cleanup / memory growth.
+No deduplication, idempotency, score-authority redesign, error-mapping change, or memory cleanup was implemented in this round.

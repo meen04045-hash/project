@@ -1,0 +1,42 @@
+MODEL STARTUP SAFETY FIX — 2026-09-30
+=====================================
+Scope: only ai_model.py get_model() startup behavior. No app.py, template, dataset, threshold, ML algorithm, model artifact, or existing evaluation file was changed.
+
+1. ORIGINAL BEHAVIOR
+--------------------
+ai_model.py imports six model/vectorizer pairs at module import. Previously get_model(force_train=False) loaded a pair only when both files existed. A missing file, or any joblib.load exception, fell through to train_model(), wrote evaluation output, and joblib.dump() overwrote/created artifacts. The load-exception diagnostic also printed the raw exception object.
+
+2. CHANGED BEHAVIOR
+-------------------
+- force_train=False: check the named model file and vectorizer file separately. Missing model or vectorizer raises FileNotFoundError naming only the artifact type and model name, with guidance to train artifacts in advance. The serving path does not create the models directory, call train_model(), or call joblib.dump().
+- force_train=False with both files present: load the vectorizer and model as before. A joblib.load failure raises a generic RuntimeError naming the artifact and suggesting advance training, chained from the original exception for diagnosis. No raw exception object is explicitly printed by get_model(). A normal uncaught Python traceback can still include the chained cause in private server logs; access to such logs remains an operational control.
+- force_train=True: retains the explicit train_model() and two joblib.dump() calls, including directory creation. train_all_models() and the separate training CLI were not changed. predict_all(msg) signature and return contract were not changed.
+
+3. FILES CHANGED IN THIS TASK
+----------------------------
+- ai_model.py: get_model() only.
+- evaluation/model_startup_safety_fix.txt: this new record.
+app.py and templates/index.html remain in their pre-existing locally modified state; this task did not edit them.
+
+4. TESTS PERFORMED
+------------------
+Test method: parse and execute only the get_model() function definition from ai_model.py, with mock joblib.load/joblib.dump and mock train_model, using disposable files under the OS temporary directory. This avoids importing ai_model.py and therefore avoids touching the real model artifacts or invoking its six startup loads. The temporary mock files were removed when the test ended. The first attempt was stopped by sandbox permission denial before any case ran; the same test was rerun with approved access to Windows Temp and completed.
+
+A. Complete temporary model/vectorizer pair + successful mock load -> PASS. Two loads; zero train_model/dump calls.
+B. Missing temporary model file -> PASS. FileNotFoundError; zero load/train/dump calls; no new artifact.
+C. Missing temporary vectorizer file -> PASS. FileNotFoundError; zero load/train/dump calls; no new artifact.
+D. Mock joblib.load raises ValueError -> PASS. Generic RuntimeError with original exception as cause; top-level message contains no mock sensitive path marker; zero train/dump calls; temporary file contents unchanged.
+E. force_train=True -> PASS. One mocked train_model call and two mocked dump calls; no real training or writes. The explicit path still creates only its temporary directory.
+Additional static assertion: predict_all retains one argument, msg. Git diff confirms train_all_models() and the CLI were unchanged.
+
+5. EXISTING ARTIFACT COMPATIBILITY AND INTEGRITY
+------------------------------------------------
+Git index lists all 12 required production model/vectorizer files; Git status and diff show no models/ changes. A previous evaluation/end_to_end_verification.txt local smoke test loaded all 12 actual artifacts and found their SHA-256 unchanged. This task intentionally did not reload, copy, hash, retrain, or overwrite the real files because its test scope was restricted to mock/temporary paths. Real loading under the eventual Render Python/dependency environment remains to be confirmed before deployment; if it fails, startup now fails rather than retraining.
+
+6. REMAINING MUST FIX FROM FINAL SYSTEM AUDIT
+----------------------------------------------
+- Safety substring/negation boundary in app.py.
+- Client-authoritative assessment result sent to /send.
+Neither was changed in this task.
+
+No commit, push, deploy, dataset change, or model overwrite was performed.

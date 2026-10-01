@@ -530,6 +530,17 @@
             <p class="splash-subtitle">พร้อมอยู่เคียงข้างคุณในทุกความรู้สึก</p>
         </div>
 
+        <div id="view-liff-error" class="view" role="alert">
+            <div>
+                <div class="welcome-hero"><i class="fa-solid fa-triangle-exclamation"></i></div>
+                <h2 class="welcome-title">ไม่สามารถเริ่มแบบประเมินได้</h2>
+                <p class="welcome-desc">ไม่สามารถยืนยันตัวตนผ่าน LINE ได้ กรุณาลองใหม่อีกครั้ง</p>
+            </div>
+            <div class="btn-footer">
+                <button type="button" class="btn-primary" onclick="window.location.reload()">ลองใหม่</button>
+            </div>
+        </div>
+
         <!-- 2. Welcome / Consent -->
         <div id="view-welcome" class="view">
             <div>
@@ -796,6 +807,7 @@
         // LIFF User Variables
         let liffInitialized = false;
         let finalReport = "";
+        let completedAssessmentStep = null;
 
         // Quiz State Variables
         let answers2Q = [null, null];
@@ -858,11 +870,9 @@
                     showScreen('view-welcome');
                 }, 2000);
 
-            } catch (err) {
-                console.error("LIFF Init Error:", err);
-                setTimeout(() => {
-                    showScreen('view-welcome');
-                }, 2000);
+            } catch (_) {
+                console.error("LIFF initialization failed");
+                showScreen('view-liff-error');
             }
         }
 
@@ -1066,6 +1076,7 @@
         }
 
         function generateReport(score9, score8, stepFinished) {
+            completedAssessmentStep = stepFinished;
             if (stepFinished === 0) {
                 // 2Q Normal
                 finalReport = "📋 ผลการประเมินสุขภาพจิตของคุณ\n\n• แบบประเมินคัดกรอง 2Q: ปกติ 😊";
@@ -1137,7 +1148,7 @@
                 return;
             }
 
-            // Post result report securely to Flask backend
+            // Send answers for server-side result calculation
             let resultSaved = false;
             fetch("/send", {
                 method: "POST",
@@ -1146,7 +1157,9 @@
                     "Authorization": `Bearer ${idToken}`
                 },
                 body: JSON.stringify({
-                    score: finalReport
+                    answers_2q: answers2Q,
+                    answers_9q: completedAssessmentStep === 0 ? [] : answers9Q,
+                    answers_8q: completedAssessmentStep === 8 ? answers8Q : []
                 })
             })
             .then(async res => {
@@ -1172,8 +1185,8 @@
                     alert("ไม่สามารถบันทึกผลได้ กรุณาลองอีกครั้ง");
                 }
             })
-            .catch(err => {
-                console.error("Fetch error:", err);
+            .catch(() => {
+                console.error("Assessment send request failed");
                 if (!resultSaved) {
                     sendButton.disabled = false;
                     alert("ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้ในขณะนี้");

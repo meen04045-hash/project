@@ -1,0 +1,68 @@
+SAFETY EXPLICIT MATCHER — NEGATION FIX — 2026-09-30
+===================================================
+Scope: app.py explicit_safety calculation only. No ML model, thresholds, high_risk list, crisis intent logic, final OR decision, response text, LIFF assessment, dataset, model artifact, or existing evaluation file was changed. This is rule behavior testing, not clinical validation.
+
+1. OLD BEHAVIOR
+---------------
+handle_message() stripped the LINE message, lowercased it, and set explicit_safety=true whenever any of nine literal Thai phrases appeared anywhere in the message. It could not distinguish a clear denial, quotation, third-person report, or later contradictory clause. Any explicit_safety=true forced the crisis reply independently of the two ML checks.
+
+2. NEW HELPER
+-------------
+app.py now defines detect_explicit_safety(text: str) -> bool. It keeps the original nine phrase literals and first performs the same substring check. If none matches, it returns false as before. If one matches, it checks a small, anchored clear-denial pattern over a whitespace-normalized whole statement; only a full match returns false. All other matches return true. The only new import is Python standard-library re; no dependency was added.
+
+handle_message() now calls detect_explicit_safety(text). The final policy remains explicit_safety OR risk_is_high OR intent_is_crisis. Risk/intent labels, thresholds, inference call, and reply text are unchanged.
+
+3. CLEAR NEGATION RULE AND MIXED HANDLING
+-----------------------------------------
+The anchored pattern recognizes short whole-message denials of อยากตาย, คิดฆ่าตัวตาย, or อยากทำร้ายตัวเอง with ไม่/ไม่ได้, optional ฉัน/ผม/หนู or ตอนนี้, and optional แล้ว. Trailing sentence punctuation is ignored only for this clear-denial comparison. Examples that now return false from the explicit rule include ไม่ได้อยากตาย, ฉันไม่ได้คิดฆ่าตัวตาย, ไม่ได้อยากทำร้ายตัวเอง, ตอนนี้ไม่ได้อยากตายแล้ว, and ไม่อยากตาย.
+
+The pattern must match the WHOLE normalized statement. A later clause, admission, hopelessness, prior-risk context, double negation, quoted/informational text, or third-person report does not match this narrow exclusion and keeps the previous conservative true result. In particular, the four D/mixed test cases remain true. This helper returning false does not declare a user safe: risk_is_high or intent_is_crisis can still trigger the unchanged safety branch.
+
+4. BEFORE/AFTER TEST MATRIX
+---------------------------
+Method: reused all 19 rows in evaluation/safety_negation_analysis.txt. A read-only Python AST harness evaluated the old phrase/normalization expressions from Git HEAD and the new helper function definition from the working tree, without importing app.py or ai_model.py. Every computed before value matched the original analysis report. PASS/FAIL below compares the new explicit result with the row's expected_explicit_safety; for expected=review, PASS means the helper stayed conservative (true). A FAIL can be a pre-existing or deliberately unresolved case, not necessarily a new regression.
+
+ID | category | current_result(before) | new_result | expected_explicit_safety | PASS/FAIL
+A1 | positive | true | true | true | PASS
+A2 | positive | true | true | true | PASS
+A3 | positive | true | true | true | PASS
+A4 | positive | true | true | true | PASS
+A5 | positive | false | false | true | FAIL — pre-existing lexical false negative; not changed in this negation-only fix
+B1 | clear_negation | true | false | false | PASS
+B2 | clear_negation | true | false | false | PASS
+B3 | clear_negation | true | false | false | PASS
+B4 | clear_negation | true | true | false | FAIL — double negation retained conservatively
+B5 | clear_negation | true | false | false | PASS
+B6 | clear_negation | true | false | false | PASS
+C1 | context_third_person | true | true | false | FAIL — third-person context retained conservatively
+C2 | context_quoted | true | true | false | FAIL — quotation context retained conservatively
+C3 | context_informational | true | true | false | FAIL — informational context retained conservatively
+C4 | context_reported_question | true | true | false | FAIL — reported question retained conservatively
+D1 | mixed_temporal | true | true | review | PASS
+D2 | mixed_ambiguous | true | true | review | PASS
+D3 | mixed_current_thought | true | true | true | PASS
+D4 | mixed_boundary | true | true | review | PASS
+
+5. COUNTS / ACCEPTANCE
+----------------------
+Total: 19. Before false positives: 10. After false positives: 5 (B4, C1-C4). Before false negatives: 1 (A5). After false negatives: 1 (A5). No new false negative. All four positive examples that previously triggered (A1-A4) still trigger; A5 was already missed and remains a known limitation. Mixed/ambiguous D1-D4 remain true, so none was automatically marked safe. The 19-row matrix has 13 PASS and 6 FAIL against expected values; the residual FAIL rows are explicitly identified above. The requested change criterion of reducing false positives without increasing false negatives or suppressing mixed cases is met. If “all positive examples must trigger” is read as requiring A5 to be fixed too, that stricter criterion remains unmet and needs a separately reviewed phrase-coverage change.
+
+6. REGRESSION RESULT
+--------------------
+The harness checked the final OR expression by AST and evaluated all four independent combinations without LINE/Firebase:
+- explicit_safety=true, other two false -> crisis branch condition true: PASS.
+- risk_is_high=true, other two false -> true: PASS.
+- intent_is_crisis=true, other two false -> true: PASS.
+- all three false -> false: PASS.
+AST comparison to Git HEAD confirmed high_risk, RISK_THRESHOLD, INTENT_CRISIS_THRESHOLD, and the final OR expression unchanged. The app was not imported and no external service was called.
+
+7. LIMITATIONS
+--------------
+- The exclusion intentionally covers only narrow whole-message denial patterns. Longer denials with explanatory text, double negations, third-person reports, quotations, and information questions can still trigger explicit safety. This preserves a conservative default but leaves five false positives in the synthetic matrix.
+- The prior lexical gap A5 is unchanged. ML risk/intent might still catch it; this task did not run ML and makes no claim about overall system sensitivity.
+- Removing a direct phrase trigger for a short denial does not itself determine clinical safety or prevent the independent ML checks from selecting the safety response. Human/safety review is still needed for real-world deployment behavior.
+- The matrix is synthetic and small; before/after counts are not population error rates.
+
+8. FILES CHANGED / PROHIBITIONS
+-------------------------------
+Changed in this task: app.py (standard-library import, helper, and one call site) and this new evaluation/safety_negation_fix.txt. ai_model.py and templates/index.html retain pre-existing working-tree changes but were not edited here. No dataset/model/other evaluation file was edited; no retraining, commit, push, or deployment occurred.

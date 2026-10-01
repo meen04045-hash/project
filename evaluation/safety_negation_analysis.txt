@@ -1,0 +1,74 @@
+SAFETY RULE NEGATION ANALYSIS + TEST MATRIX — 2026-09-30
+=====================================================
+Scope: analysis and read-only test of the explicit phrase matcher in app.py. No application code, ML model, dataset, existing evaluation, threshold, or safety flow was changed. Synthetic examples only; no real user messages. The expected values below describe the narrow RULE-BASED self-directed/current matcher, not a clinical diagnosis, not an ML prediction, and not a final judgment that a person is safe.
+
+1. CURRENT LOGIC (EXACT CODE PATH)
+----------------------------------
+- app.py:481-488: handle_message(event) handles LINE TextMessage and sets text = event.message.text.strip(). Exact command branches at app.py:501-591 return before inference/safety matching.
+- app.py:694-714: explicit_safety_phrases contains nine substrings: อยากตาย; ฆ่าตัวตาย; คิดฆ่าตัวตาย; อยากทำร้ายตัวเอง; ทำร้ายตัวเอง; ไม่อยากมีชีวิต; ไม่อยากมีชีวิตอยู่; ไม่อยากมีชีวิตอยู่แล้ว; ไม่อยากอยู่แล้ว.
+- app.py:717: text_lower = text.lower(). No Thai tokenization, Unicode normalization, negation parsing, quotation detection, speaker attribution, or temporal parsing occurs in this rule.
+- app.py:719-725: explicit_safety = any(phrase in text_lower for phrase in explicit_safety_phrases). A phrase may match inside a longer word or a negated/quoted/reported clause.
+- app.py:731-754: independent ML checks set risk_is_high and intent_is_crisis. app.py:757-781 selects the crisis response if explicit_safety OR risk_is_high OR intent_is_crisis. Thus a true explicit match forces that response even if both ML checks are false. A false explicit match does not establish safety because either ML check can still trigger.
+
+2. TEST METHOD AND EXPECTED-VALUE RULES
+---------------------------------------
+The read-only test parsed app.py with Python AST, extracted the current nine phrase literals and the exact text_lower/explicit_safety expressions, and evaluated them in memory on 19 synthetic statements. It did not import app.py or ai_model.py, call predict_all(), contact LINE/Firestore, or write test artifacts.
+
+Expected_explicit_safety=true means the synthetic wording itself expresses current self-directed wish/thought strongly enough that this narrow explicit matcher should fire. false means the specified wording alone is a clear denial or a quoted/third-person/informational reference, so this SELF-DIRECTED explicit rule should not fire merely because a substring occurs. It does NOT mean the message deserves no help: third-person concern, prior history, and distress can require an appropriate response. review means mixed/temporal/boundary content must not be auto-classified as safe; false_positive and false_negative are n/a for those rows. D3 has a current thought after denial to others and is expected true.
+
+For this constructed matrix only: false_positive = current true AND expected false; false_negative = current false AND expected true. Neither count estimates real-world clinical sensitivity/specificity or the full system's ML-assisted safety outcome.
+
+3. TEST MATRIX
+--------------
+ID | text | expected_category | current_explicit_safety | expected_explicit_safety | false_positive | false_negative | note
+A1 | อยากตาย | positive | true | true | false | false | Current self-directed wish; direct phrase match.
+A2 | คิดฆ่าตัวตาย | positive | true | true | false | false | Current self-directed thought; direct phrase match.
+A3 | อยากทำร้ายตัวเอง | positive | true | true | false | false | Current self-harm wish; direct phrase match.
+A4 | ไม่อยากมีชีวิตอยู่แล้ว | positive | true | true | false | false | Current wish not to live; direct phrase match.
+A5 | ฉันคิดจะจบชีวิตตัวเอง | positive | false | true | false | true | Direct self-directed ideation with different wording; none of the nine phrases matches.
+B1 | ไม่ได้อยากตาย | clear_negation | true | false | true | false | ไม่ได้ negates the current wish, but อยากตาย still matches.
+B2 | ฉันไม่ได้คิดฆ่าตัวตาย | clear_negation | true | false | true | false | Negated thought still contains คิดฆ่าตัวตาย/ฆ่าตัวตาย.
+B3 | ไม่ได้อยากทำร้ายตัวเอง | clear_negation | true | false | true | false | Negated wish still contains self-harm phrase.
+B4 | ฉันไม่ได้ไม่อยากมีชีวิตอยู่ | clear_negation | true | false | true | false | Double negation reverses the literal wish; wording is unnatural and requires caution.
+B5 | ตอนนี้ไม่ได้อยากตายแล้ว | clear_negation | true | false | true | false | Denies current wish; implied past concern can still merit follow-up.
+B6 | ไม่อยากตาย | clear_negation | true | false | true | false | The leading ไม่ negates อยากตาย; simple substring ignores it.
+C1 | เพื่อนบอกว่าอยากตาย | context_third_person | true | false | true | false | Report of a friend's statement, not own current wish; still merits support for the friend.
+C2 | คำว่า "ฆ่าตัวตาย" หมายถึงอะไร | context_quoted | true | false | true | false | Quoted word in a definition question.
+C3 | ฉันอ่านบทความเรื่องการฆ่าตัวตาย | context_informational | true | false | true | false | Reading an article, not declaring own intent.
+C4 | เขาถามฉันว่าอยากตายไหม | context_reported_question | true | false | true | false | Reported question from another person, not own answer.
+D1 | เมื่อก่อนเคยอยากตาย แต่ตอนนี้ไม่แล้ว | mixed_temporal | true | review | n/a | n/a | Past wish plus current denial; do not discard past context automatically.
+D2 | ไม่ได้อยากตาย แต่ไม่รู้จะอยู่ไปทำไม | mixed_ambiguous | true | review | n/a | n/a | Denial plus hopelessness; not automatically safe.
+D3 | ฉันบอกทุกคนว่าไม่ได้อยากตาย แต่จริงๆ ยังคิดอยู่ | mixed_current_thought | true | true | false | false | Denial to others followed by an admission of a current thought.
+D4 | ไม่อยากมีชีวิตแบบนี้ แต่ก็ไม่ได้คิดฆ่าตัวตาย | mixed_boundary | true | review | n/a | n/a | Could mean wanting circumstances to change; also contains explicit denial. Needs context.
+
+4. RESULTS AND ROOT CAUSES
+--------------------------
+Total test cases: 19 (positive A=5; clear negation B=6; third-person/quoted/informational C=4; mixed/ambiguous D=4).
+Current explicit_safety=true: 18/19. On determinate expected values: false positives 10 (B=6, C=4); false negatives 1 (A5); expected=review 3 (D1, D2, D4), deliberately excluded from FP/FN; D3 is expected true and matched. These are synthetic regression examples, not measured error rates on real traffic.
+
+- Simple substring: any occurrence anywhere in the lowercased text triggers, including embedded matches inside negations, quotes, and references to another person. Overlapping phrase entries do not resolve context.
+- Thai negation: ไม่, ไม่ได้, แล้ว, and double-negation constructions can alter current intent while leaving the positive phrase intact. A single preceding ไม่ได้ is not a reliable safety verdict; D3 shows a denial can be followed by a current thought.
+- Quoted/third-person context: C1-C4 show the matcher cannot distinguish a user's own current statement from reported speech, a definition question, or informational reading. A third-person report can still warrant help for that person; expected=false is limited to the user's own explicit crisis matcher.
+- Temporal context: B5 and D1 include past/current contrasts. B5 is a direct current denial, whereas D1 is held for review because the past risk remains contextually relevant. Neither should be called clinically safe from this rule alone.
+- Mixed intent/boundaries: D2-D4 combine negation with hopelessness, a later admission, or life-circumstance wording. Blanket exclusion would risk suppressing D3 and similar disclosures.
+- Lexical gap: A5 is a direct self-directed statement without a configured phrase. The independent ML paths might still identify it, but this test did not run them.
+
+5. MINIMAL FIX OPTIONS (PROPOSALS ONLY; NONE IMPLEMENTED)
+----------------------------------------------------------
+Option A — Negation-aware exclusions near a matched phrase.
+Complexity: low to medium for a small curated set of clear denials. False-negative risk: HIGH if a negation anywhere before a phrase suppresses D3 or a later clause. Maintainability: initially simple but fragile as Thai expressions vary. Recommendation: do not use as a blanket stand-alone rule; only suppress tightly defined, unambiguous whole statements with regression tests.
+
+Option B — Regex/clause context window for negation, quotation, speaker, and time markers.
+Complexity: medium to high because Thai spacing, compound clauses, and reported speech vary. False-negative risk: MEDIUM to HIGH if a context window incorrectly spans a later admission. Maintainability: moderate to poor without a growing labeled regression matrix. Recommendation: consider only if tests show a bounded pattern set; do not treat a preceding ไม่ได้ as sufficient by itself.
+
+Option C — Dedicated conservative safety-matching helper with explicit outcomes for direct match, clear contextual/negated reference, and unresolved mixed content.
+Complexity: medium; the change can stay localized to the explicit rule without changing ML thresholds or the 2Q/9Q/8Q flow. False-negative risk: lower than A/B if only unmistakable denials/informational references suppress direct matching and mixed cases retain safety-oriented handling or request clarification. Maintainability: better because context rules and test cases live together. Recommendation: preferred minimal direction after human/safety review. Preserve current risk_is_high and intent_is_crisis OR paths; never map an unresolved case to safe by default.
+
+6. LIMITS AND NEXT STEP
+-----------------------
+Expected labels are engineering expectations for a rule-based direct-current matcher, not clinical labels. NIMH lists talking about wanting to die among warning signs and emphasizes further assessment/context; this source does not validate this project's matcher or the expected values above. Real LINE user messages, ML outputs, and clinical outcomes were not evaluated. Before any change, a Human Reviewer should confirm the expected behavior for B5, C1, and D1-D4 and approve a regression matrix. No fix option was implemented.
+
+Reference: https://www.nimh.nih.gov/health/publications/warning-signs-of-suicide
+
+Files changed in this task: evaluation/safety_negation_analysis.txt only.
+No app.py/ai_model.py/template/dataset/model edit, retraining, commit, or push occurred.
