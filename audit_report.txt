@@ -1,4 +1,4 @@
-Dataset audit — directory: C:\Users\MeNos\OneDrive\Desktop\project\dataset
+Dataset audit — directory: dataset/
 
 ==============================================================================
 FILE: risk.csv  (rows: 1211, labels: 8)
