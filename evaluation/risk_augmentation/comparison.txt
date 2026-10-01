@@ -1,0 +1,87 @@
+Risk Model Augmentation: Before vs After
+==================================================
+Original dataset SHA-256: 36e4fdaf58441e156772d477e56180bd9785ea831f73c935d786a965e21e717e
+Reviewed dataset SHA-256: 25fa3dfa89349480680c67aa344494c849a594ada0ed4c33fc26b5dbeb68bdbb
+Shared test set SHA-256: 6d9a1d38230c1d35f4080fef7309937cc07edd2f9e80c8961a738d4603531d44
+Original rows: 1211
+Baseline training rows: 968
+Augmented training rows: 1041
+Reviewed rows added to training only: 73
+Shared test rows: 243
+Reviewed/test normalized-text overlap: 0 (checked before training)
+Python libraries: pandas=3.0.2, scikit-learn=1.8.0, PyThaiNLP=5.3.4
+Algorithm, TF-IDF settings, calibration, and random_state match ai_model.py.
+No model files were saved.
+
+Overall metrics (delta = After - Before):
+Metric                 Before     After      Delta
+Accuracy               0.728395  0.740741  +0.012346
+Macro Precision        0.735382  0.748624  +0.013242
+Macro Recall           0.732535  0.742837  +0.010302
+Macro F1               0.733245  0.742785  +0.009539
+Errors                       66        63         -3
+
+Per-class metrics (precision / recall / F1; deltas in parentheses):
+Class                         Support  Before P/R/F1                    After P/R/F1                     Delta P/R/F1
+depression                         31  0.571/0.516/0.542               0.593/0.516/0.552               +0.021/+0.000/+0.009
+normal                             33  0.829/0.879/0.853               0.829/0.879/0.853               +0.000/+0.000/+0.000
+risk_immediate_danger              26  0.692/0.692/0.692               0.690/0.769/0.727               -0.003/+0.077/+0.035
+risk_passive                       39  0.595/0.641/0.617               0.622/0.718/0.667               +0.027/+0.077/+0.049
+risk_self_harm                     26  1.000/1.000/1.000               1.000/1.000/1.000               +0.000/+0.000/+0.000
+risk_suicidal_ideation             28  0.654/0.607/0.630               0.714/0.536/0.612               +0.060/-0.071/-0.017
+risk_suicide_plan                  26  0.792/0.731/0.760               0.792/0.731/0.760               +0.000/+0.000/+0.000
+stress                             34  0.750/0.794/0.771               0.750/0.794/0.771               +0.000/+0.000/+0.000
+
+Paired outcomes on the same test rows:
+Correct in both: 174
+Fixed by augmented model: 6
+Regressed after augmentation: 3
+Wrong in both: 60
+
+Focus-class error destinations (predicted class=count; only nonzero values shown):
+depression Before: normal=1, risk_immediate_danger=1, risk_passive=7, stress=6
+depression After: normal=1, risk_immediate_danger=1, risk_passive=7, stress=6
+risk_passive Before: depression=5, risk_immediate_danger=1, risk_suicidal_ideation=8
+risk_passive After: depression=4, risk_immediate_danger=1, risk_suicidal_ideation=6
+risk_suicidal_ideation Before: depression=1, normal=1, risk_immediate_danger=1, risk_passive=8
+risk_suicidal_ideation After: depression=1, normal=1, risk_immediate_danger=1, risk_passive=10
+risk_suicide_plan Before: normal=3, risk_immediate_danger=3, risk_passive=1
+risk_suicide_plan After: normal=3, risk_immediate_danger=4
+risk_immediate_danger Before: risk_passive=1, risk_suicidal_ideation=1, risk_suicide_plan=5, stress=1
+risk_immediate_danger After: risk_suicide_plan=5, stress=1
+
+Focused findings (same test rows):
+depression: correct 16/31 -> 16/31; recall +0.000, F1 +0.009
+risk_passive: correct 25/39 -> 28/39; recall +0.077, F1 +0.049
+risk_suicidal_ideation: correct 17/28 -> 15/28; recall -0.071, F1 -0.017
+risk_suicide_plan: correct 19/26 -> 19/26; recall +0.000, F1 +0.000
+risk_immediate_danger: correct 18/26 -> 20/26; recall +0.077, F1 +0.035
+Ideation predicted as passive: 8 -> 10; this safety-relevant error increased.
+
+Before confusion matrix:
+Rows = true label; columns = predicted label
+Label order: depression, normal, risk_immediate_danger, risk_passive, risk_self_harm, risk_suicidal_ideation, risk_suicide_plan, stress
+depression: 16, 1, 1, 7, 0, 0, 0, 6
+normal: 0, 29, 2, 0, 0, 0, 0, 2
+risk_immediate_danger: 0, 0, 18, 1, 0, 1, 5, 1
+risk_passive: 5, 0, 1, 25, 0, 8, 0, 0
+risk_self_harm: 0, 0, 0, 0, 26, 0, 0, 0
+risk_suicidal_ideation: 1, 1, 1, 8, 0, 17, 0, 0
+risk_suicide_plan: 0, 3, 3, 1, 0, 0, 19, 0
+stress: 6, 1, 0, 0, 0, 0, 0, 27
+
+After confusion matrix:
+Rows = true label; columns = predicted label
+Label order: depression, normal, risk_immediate_danger, risk_passive, risk_self_harm, risk_suicidal_ideation, risk_suicide_plan, stress
+depression: 16, 1, 1, 7, 0, 0, 0, 6
+normal: 0, 29, 2, 0, 0, 0, 0, 2
+risk_immediate_danger: 0, 0, 20, 0, 0, 0, 5, 1
+risk_passive: 4, 0, 1, 28, 0, 6, 0, 0
+risk_self_harm: 0, 0, 0, 0, 26, 0, 0, 0
+risk_suicidal_ideation: 1, 1, 1, 10, 0, 15, 0, 0
+risk_suicide_plan: 0, 3, 4, 0, 0, 0, 19, 0
+stress: 6, 1, 0, 0, 0, 0, 0, 27
+
+Existing evaluation/risk_report.txt accuracy: 0.728395; new baseline difference: +0.000000
+Interpretation: this is one fixed holdout comparison, not a clinical validation.
+No production model replacement is decided by this experiment.

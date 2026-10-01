@@ -1,0 +1,63 @@
+Persistent Error Analysis: risk_suicidal_ideation -> risk_passive
+==================================================================
+Scope: Analysis only. No label, test set, training data, model, or production code changed.
+
+Inputs
+------
+- evaluation/risk_augmentation_v2/baseline_errors.csv
+- evaluation/risk_augmentation_v2/augmented_v1_errors.csv
+- evaluation/risk_augmentation_v2/augmented_v2_errors.csv
+- evaluation/risk_augmentation_v2/comparison.txt
+- dataset/risk.csv
+- dataset/risk_augmented_reviewed.csv
+- dataset/risk_suicidal_ideation_final_v2.csv
+
+Shared test set: 243 rows; SHA-256 6d9a1d38230c1d35f4080fef7309937cc07edd2f9e80c8961a738d4603531d44 (as recorded in comparison.txt).
+test_row is the zero-based data-row index in risk.csv, not the physical CSV line number.
+Persistent target errors: 10 rows: 711, 722, 729, 733, 736, 743, 751, 770, 782, 783.
+All ten have true label risk_suicidal_ideation and v1/v2 prediction risk_passive.
+Baseline predicted risk_passive on 8/10; it predicted risk_suicidal_ideation correctly on rows 733 and 782. The baseline error-only file has no confidence for those two correct predictions; CSV records not_recorded rather than an estimated value.
+
+Method
+------
+The original train/test split was reconstructed with test_size=0.2, random_state=42, shuffle=True, and stratification by label. It yields the same 243-row holdout used in the experiment. Similarity pools exclude all holdout rows:
+- risk_passive: 166 original-training plus reviewed-v1 examples.
+- risk_suicidal_ideation: 129 original-training plus reviewed-v1 examples.
+- final v2 ideation augmentation: 28 examples, kept as its own comparison pool.
+Nearest-example similarity is Jaccard overlap of normalized Thai character trigrams (lowercase; spaces and punctuation removed). It is an audit aid, not the model's TF-IDF score, a semantic verdict, or evidence that a test label is wrong. The source path and physical CSV row of each nearest example are recorded in persistent_ideation_errors.csv. Per-row notes distinguish the passive signal, explicit ideation evidence or its absence, possible TF-IDF lexical pull, training contrast, and v2 coverage.
+
+Counts and boundary findings
+----------------------------
+Likely issue type is one primary analytical tag per row, not a label decision:
+- label_boundary: 4 (711, 733, 751, 782)
+- insufficient_contrast_examples: 0
+- lexical_overlap: 2 (736, 743)
+- semantic_gap: 4 (722, 729, 770, 783)
+- model_representation_limit: 0
+- unclear: 0
+Human review needed: 10/10. In isolation, none of the ten texts explicitly says the speaker intends to end their own life. Some convey a passive wish or absence from the world (733, 751, 782); others convey hopelessness, pain, worthlessness, or exhaustion. This observation warrants review of original annotation context and boundary rules. It does not overturn any existing label. The absence of a primary insufficient_contrast_examples tag does not mean training contrast is sufficient; multiple rows have similar wording across different labels, as noted below.
+
+Training overlap and shared patterns
+------------------------------------
+Selected substring document counts in the compared training pools (passive 166 / ideation 129) illustrate shared vocabulary, not feature weights:
+- ไม่มี: 35 / 14
+- ชีวิต: 28 / 37
+- อยาก: 49 / 54
+- ตัวเอง: 29 / 40
+- รู้สึก: 27 / 14
+- หายไป: 21 / 8
+- โลก: 12 / 5
+- ความเจ็บปวด: 1 / 2
+These terms can occur on both sides of the boundary. In particular, test row 733 resembles a passive example about the world without oneself (risk.csv physical row 498), while a nearby ideation example adds self-directed action (row 686). Test row 782 resembles passive "ไม่อยากมีชีวิตอยู่" (row 356) and ideation "รู้สึกเหมือนตัวเองไม่ควรมีชีวิตอยู่" (row 730). Test row 743 is lexically very close to a passive example about lacking energy to start the day (row 445; trigram Jaccard 0.791667). Pain wording likewise spans labels around row 770, but the ideation training example adds "อยากตาย". These contrasts can pull a lexical representation toward passive; they do not establish that any training or test label is wrong.
+
+V2 coverage and confidence
+--------------------------
+The closest final-v2 augmentation example to each error has character-trigram Jaccard 0.022472-0.135135 (median 0.068637). The 28 v2 examples generally express an explicit thought of ending one's own life; these ten test utterances use shorter or more indirect language. On this lexical check, v2 does not closely cover the observed wording. Low trigram overlap alone cannot prove a semantic gap or quantify clinical meaning.
+All ten remain ideation -> passive errors from v1 to v2. The passive prediction confidence increased in 9/10 rows, decreased only in row 782, with mean v2-minus-v1 change +0.013793. Among the 8 rows already wrong in baseline, v2 passive confidence exceeds baseline in 5 (711, 729, 751, 770, 783). Thus there are cases where v2 is more confident in the wrong class. Because these values are prediction confidences, not calibrated evidence of label truth, they must not be used to relabel rows.
+The experiment-wide comparison reports ideation recall 0.607143 -> 0.535714 -> 0.535714, ideation-to-passive errors 8 -> 10 -> 10, and overall macro F1 0.733245 -> 0.742785 -> 0.749646 for baseline -> v1 -> v2. V2 improved overall performance but did not fix this target error group.
+
+Interpretation and next step
+----------------------------
+The evidence points to multiple interacting factors: a label boundary that requires human context review, shared wording across passive and ideation training examples, and limited lexical coverage of these indirect test expressions in v2. A model representation limit is possible but not established by this analysis; no alternate model experiment was run. The primary next step is B: human review of the ten test labels and the passive/ideation boundary using the original annotation context, without changing labels automatically. Record whether each case has context supporting ideation and where the boundary guidance needs clarification. Do not use these holdout texts as training examples. No augmentation, model experiment, merge, or training action is performed or authorized by this report.
+
+Detailed per-row evidence: evaluation/risk_augmentation_v2/persistent_ideation_errors.csv

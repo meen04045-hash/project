@@ -1,0 +1,46 @@
+Risk Model Augmented v2 Holdout Report
+======================================================
+risk.csv SHA-256: 36e4fdaf58441e156772d477e56180bd9785ea831f73c935d786a965e21e717e
+risk_augmented_reviewed.csv SHA-256: 25fa3dfa89349480680c67aa344494c849a594ada0ed4c33fc26b5dbeb68bdbb
+risk_suicidal_ideation_final_v2.csv SHA-256: 12b4293cdadf6dae4502a031d86cb9a2e052f7b78011a4a65d8e41bdf632f055
+Shared test set SHA-256: 6d9a1d38230c1d35f4080fef7309937cc07edd2f9e80c8961a738d4603531d44
+Training rows: 1069
+Shared test rows: 243
+TF-IDF vocabulary size: 4361
+Calibration folds: 5
+Algorithm: LinearSVC(C=1.0, class_weight='balanced', random_state=42) + CalibratedClassifierCV
+TF-IDF: PyThaiNLP newmm tokenizer, token_pattern=None, ngram_range=(1, 3), min_df=1
+Split: test_size=0.2, random_state=42, shuffle=True, stratify=label
+Accuracy: 0.748971
+Macro Precision: 0.759120
+Macro Recall: 0.749247
+Macro F1: 0.749646
+Error count: 61
+
+Per-class Precision / Recall / F1:
+                        precision    recall  f1-score   support
+
+            depression   0.592593  0.516129  0.551724        31
+                normal   0.852941  0.878788  0.865672        33
+ risk_immediate_danger   0.689655  0.769231  0.727273        26
+          risk_passive   0.638298  0.769231  0.697674        39
+        risk_self_harm   1.000000  1.000000  1.000000        26
+risk_suicidal_ideation   0.789474  0.535714  0.638298        28
+     risk_suicide_plan   0.760000  0.730769  0.745098        26
+                stress   0.750000  0.794118  0.771429        34
+
+              accuracy                       0.748971       243
+             macro avg   0.759120  0.749247  0.749646       243
+          weighted avg   0.751882  0.748971  0.745936       243
+
+Confusion Matrix:
+Rows = true label; columns = predicted label
+Label order: depression, normal, risk_immediate_danger, risk_passive, risk_self_harm, risk_suicidal_ideation, risk_suicide_plan, stress
+depression: 16, 1, 1, 7, 0, 0, 0, 6
+normal: 0, 29, 2, 0, 0, 0, 0, 2
+risk_immediate_danger: 0, 0, 20, 0, 0, 0, 5, 1
+risk_passive: 4, 0, 1, 30, 0, 4, 0, 0
+risk_self_harm: 0, 0, 0, 0, 26, 0, 0, 0
+risk_suicidal_ideation: 1, 1, 1, 10, 0, 15, 0, 0
+risk_suicide_plan: 0, 3, 4, 0, 0, 0, 19, 0
+stress: 6, 0, 0, 0, 0, 0, 1, 27

@@ -1,0 +1,115 @@
+Risk Model Augmentation v2: Three-Configuration Comparison
+==========================================================
+risk.csv SHA-256: 36e4fdaf58441e156772d477e56180bd9785ea831f73c935d786a965e21e717e
+risk_augmented_reviewed.csv SHA-256: 25fa3dfa89349480680c67aa344494c849a594ada0ed4c33fc26b5dbeb68bdbb
+risk_suicidal_ideation_final_v2.csv SHA-256: 12b4293cdadf6dae4502a031d86cb9a2e052f7b78011a4a65d8e41bdf632f055
+Shared test set SHA-256: 6d9a1d38230c1d35f4080fef7309937cc07edd2f9e80c8961a738d4603531d44
+Prior experiment test SHA-256 matched exactly before training.
+Baseline and v1 metrics and wrong-row predictions matched the prior experiment.
+Original rows: 1211
+Training rows A/B/C: 968 / 1041 / 1069
+Shared test rows: 243
+v1 and v2 normalized-text overlap with the shared test set: 0 / 0
+Python libraries: pandas=3.0.2, scikit-learn=1.8.0, PyThaiNLP=5.3.4
+Algorithm, TF-IDF, calibration, random_state, and hyperparameters are imported from the prior experiment.
+No model files were saved.
+
+Overall metrics (deltas are v1-A and v2-v1):
+Metric                 Baseline      v1          v2        v1-A       v2-v1
+Accuracy               0.728395  0.740741  0.748971  +0.012346  +0.008230
+Macro Precision        0.735382  0.748624  0.759120  +0.013242  +0.010496
+Macro Recall           0.732535  0.742837  0.749247  +0.010302  +0.006410
+Macro F1               0.733245  0.742785  0.749646  +0.009539  +0.006861
+Errors                       66        63        61         -3         -2
+
+Focus classes: precision / recall / F1 (support is from the shared test set)
+risk_passive (support=39)
+  Baseline      P=0.595238 R=0.641026 F1=0.617284
+  Augmented v1  P=0.622222 R=0.717949 F1=0.666667
+  Augmented v2  P=0.638298 R=0.769231 F1=0.697674
+  Correct cases: 25 -> 28 -> 30
+risk_suicidal_ideation (support=28)
+  Baseline      P=0.653846 R=0.607143 F1=0.629630
+  Augmented v1  P=0.714286 R=0.535714 F1=0.612245
+  Augmented v2  P=0.789474 R=0.535714 F1=0.638298
+  Correct cases: 17 -> 15 -> 15
+risk_suicide_plan (support=26)
+  Baseline      P=0.791667 R=0.730769 F1=0.760000
+  Augmented v1  P=0.791667 R=0.730769 F1=0.760000
+  Augmented v2  P=0.760000 R=0.730769 F1=0.745098
+  Correct cases: 19 -> 19 -> 19
+risk_immediate_danger (support=26)
+  Baseline      P=0.692308 R=0.692308 F1=0.692308
+  Augmented v1  P=0.689655 R=0.769231 F1=0.727273
+  Augmented v2  P=0.689655 R=0.769231 F1=0.727273
+  Correct cases: 18 -> 20 -> 20
+depression (support=31)
+  Baseline      P=0.571429 R=0.516129 F1=0.542373
+  Augmented v1  P=0.592593 R=0.516129 F1=0.551724
+  Augmented v2  P=0.592593 R=0.516129 F1=0.551724
+  Correct cases: 16 -> 16 -> 16
+
+Target boundary: risk_suicidal_ideation vs risk_passive
+---------------------------------------------------------
+Ideation recall A -> v1 -> v2: 0.607143 -> 0.535714 -> 0.535714
+Ideation F1 A -> v1 -> v2: 0.629630 -> 0.612245 -> 0.638298
+Ideation predicted as passive A -> v1 -> v2: 8 -> 10 -> 10
+Passive recall A -> v1 -> v2: 0.641026 -> 0.717949 -> 0.769231
+Passive F1 A -> v1 -> v2: 0.617284 -> 0.666667 -> 0.697674
+
+Paired v1-to-v2 outcomes on the same 243 test rows:
+Correct in both: 180
+Fixed by v2: 2
+Regressed under v2: 0
+Wrong in both: 61
+Fixed test indices: [418, 502]; true labels: ['risk_passive', 'risk_passive']
+Ideation-to-passive test indices unchanged: yes
+
+Project-relevant changes from v1 to v2:
+risk_passive: correct +2, recall +0.051282, F1 +0.031008
+risk_suicidal_ideation: correct +0, recall +0.000000, F1 +0.026053
+risk_suicide_plan: correct +0, recall +0.000000, F1 -0.014902
+risk_immediate_danger: correct +0, recall +0.000000, F1 +0.000000
+depression: correct +0, recall +0.000000, F1 +0.000000
+The ideation-to-passive target did not improve on both measures.
+Overall accuracy improved, but targeted follow-up is needed before any production decision.
+One fixed holdout cannot establish statistical or clinical significance.
+No production model replacement is decided by this experiment.
+
+Confusion matrices (rows=true, columns=predicted):
+
+Baseline
+Rows = true label; columns = predicted label
+Label order: depression, normal, risk_immediate_danger, risk_passive, risk_self_harm, risk_suicidal_ideation, risk_suicide_plan, stress
+depression: 16, 1, 1, 7, 0, 0, 0, 6
+normal: 0, 29, 2, 0, 0, 0, 0, 2
+risk_immediate_danger: 0, 0, 18, 1, 0, 1, 5, 1
+risk_passive: 5, 0, 1, 25, 0, 8, 0, 0
+risk_self_harm: 0, 0, 0, 0, 26, 0, 0, 0
+risk_suicidal_ideation: 1, 1, 1, 8, 0, 17, 0, 0
+risk_suicide_plan: 0, 3, 3, 1, 0, 0, 19, 0
+stress: 6, 1, 0, 0, 0, 0, 0, 27
+
+Augmented v1
+Rows = true label; columns = predicted label
+Label order: depression, normal, risk_immediate_danger, risk_passive, risk_self_harm, risk_suicidal_ideation, risk_suicide_plan, stress
+depression: 16, 1, 1, 7, 0, 0, 0, 6
+normal: 0, 29, 2, 0, 0, 0, 0, 2
+risk_immediate_danger: 0, 0, 20, 0, 0, 0, 5, 1
+risk_passive: 4, 0, 1, 28, 0, 6, 0, 0
+risk_self_harm: 0, 0, 0, 0, 26, 0, 0, 0
+risk_suicidal_ideation: 1, 1, 1, 10, 0, 15, 0, 0
+risk_suicide_plan: 0, 3, 4, 0, 0, 0, 19, 0
+stress: 6, 1, 0, 0, 0, 0, 0, 27
+
+Augmented v2
+Rows = true label; columns = predicted label
+Label order: depression, normal, risk_immediate_danger, risk_passive, risk_self_harm, risk_suicidal_ideation, risk_suicide_plan, stress
+depression: 16, 1, 1, 7, 0, 0, 0, 6
+normal: 0, 29, 2, 0, 0, 0, 0, 2
+risk_immediate_danger: 0, 0, 20, 0, 0, 0, 5, 1
+risk_passive: 4, 0, 1, 30, 0, 4, 0, 0
+risk_self_harm: 0, 0, 0, 0, 26, 0, 0, 0
+risk_suicidal_ideation: 1, 1, 1, 10, 0, 15, 0, 0
+risk_suicide_plan: 0, 3, 4, 0, 0, 0, 19, 0
+stress: 6, 0, 0, 0, 0, 0, 1, 27

@@ -1,0 +1,77 @@
+Persistent ideation Human Review: validation summary
+===================================================
+Source: evaluation/risk_augmentation_v2/persistent_ideation_human_review.csv
+Source SHA-256: b5e7a828bfed93b0a6b6130f4bc5e3c6eac592d93096714dab63a5cd98512ea9
+This review is metadata only. The original test labels and test set remain unchanged.
+
+Validation result
+-----------------
+PASS: 10 data rows; CSV parsed strictly; every row has the header column count.
+PASS: human_decision, possible_alternative_label, and reviewer_note are nonempty in all 10 rows.
+PASS: all human_decision and possible_alternative_label values are in their allowed sets.
+Review consistency flags: 0 (none).
+
+Total rows: 10
+
+Human decision counts and test_row
+----------------------------------
+CONFIRM_IDEATION: 0; test_row: none
+AMBIGUOUS: 1; test_row: 733
+POSSIBLE_OTHER_LABEL: 9; test_row: 711, 722, 729, 736, 743, 751, 770, 782, 783
+NEED_EXPERT_REVIEW: 0; test_row: none
+
+Possible alternative label counts
+---------------------------------
+none: 0
+risk_passive: 0
+depression: 7
+stress: 3
+risk_suicide_plan: 0
+risk_immediate_danger: 0
+other: 0
+
+POSSIBLE_OTHER_LABEL details (reviewer wording preserved)
+----------------------------------------------------------
+test_row 711 | possible_alternative_label=stress | reviewer_note=ดูเเป็นกังวล คิดมาก เหนื่อยใจ มากกว่าความคิดอยากตาย
+test_row 722 | possible_alternative_label=depression | reviewer_note=ข้อความสื่อถึงความทุกข์และความเหนื่อยใจมากกว่าความคิดอยากตาย
+test_row 729 | possible_alternative_label=depression | reviewer_note=ข้อความสื่อถึงหมดหวังและความทุกข์มากกว่าความคิดอยากตาย
+test_row 736 | possible_alternative_label=depression | reviewer_note=ข้อความสื่อถึงความหมดหวังไม่มีคุฯค่าในตัวเอง
+test_row 743 | possible_alternative_label=depression | reviewer_note=ข้อความสื่อถึงความหมดหวังในการทำสิ่งใหม่ๆ
+test_row 751 | possible_alternative_label=depression | reviewer_note=ข้อความสื่อถึงความหมดหวังในชีวิต
+test_row 770 | possible_alternative_label=stress | reviewer_note=ข้อความสื่อถึงความเจ็บปวดและความต้องการหยุด suffering
+test_row 782 | possible_alternative_label=depression | reviewer_note=ข้อความสื่อถึงความหมดหวังในชีวิต
+test_row 783 | possible_alternative_label=depression | reviewer_note=ข้อความสื่อถึงความหมดหวังและความทุกข์ ไม่สามารถยิ้มได้
+
+AMBIGUOUS details (reviewer wording preserved)
+------------------------------------------------
+test_row 733 | possible_alternative_label=stress | reviewer_note=ข้อความสื้อถึงการหายไปของตัวเองมากกว่าความคิดอยากตาย
+
+Distribution: human_decision x likely_issue_type
+-----------------------------------------------
+decision | label_boundary | insufficient_contrast_examples | lexical_overlap | semantic_gap | model_representation_limit | unclear
+CONFIRM_IDEATION | 0 | 0 | 0 | 0 | 0 | 0
+AMBIGUOUS | 1 | 0 | 0 | 0 | 0 | 0
+POSSIBLE_OTHER_LABEL | 3 | 0 | 2 | 4 | 0 | 0
+NEED_EXPERT_REVIEW | 0 | 0 | 0 | 0 | 0 | 0
+
+V2 confidence versus V1
+------------------------
+The source persistent-error analysis identifies 9/10 wrong passive predictions with higher v2 confidence than v1 (test_row 711, 722, 729, 733, 736, 743, 751, 770, 783).
+Among those, CONFIRM_IDEATION: 0.
+
+Reviewer interpretation counts
+------------------------------
+ideation clearly confirmed: 0
+ambiguous: 1
+possible other label: 9
+needs expert review: 0
+
+Interpretation
+--------------
+The review metadata points primarily toward annotation ambiguity and possible label mismatch: nine rows are marked POSSIBLE_OTHER_LABEL and one is a boundary case marked AMBIGUOUS. This does not establish that any original true label is wrong. The alternative labels are reviewer observations, not replacement labels. These results alone do not isolate a data/model representation failure. No metric was recomputed using changed labels.
+
+One evidence-based next step
+----------------------------
+D. Request expert review of the original annotation context and label boundaries before any dataset or model decision. This recommendation is not executed here.
+
+No test row was moved to training; no relabel, augmentation, merge, retraining, model overwrite, commit, or push was performed.

@@ -1,0 +1,126 @@
+RISK MODEL FINALIZATION RECORD
+==============================
+Record date: 2026-09-29
+Purpose: Documentation and project freeze only. No training, relabeling, dataset merge, model replacement, or deployment is authorized by this record.
+Project root: <PROJECT_ROOT> (repository root containing app.py, dataset/, and evaluation/)
+Metric source: evaluation/risk_augmentation/comparison.txt and evaluation/risk_augmentation_v2/comparison.txt.
+All metrics below are copied from the existing fixed-holdout experiments; no metric is recomputed from Human Review labels.
+
+1. ORIGINAL BASELINE
+--------------------
+Training: original training portion of dataset/risk.csv only; train size 968.
+Test size: 243, on the shared primary holdout.
+Accuracy: 0.728395
+Macro Precision: 0.735382
+Macro Recall: 0.732535
+Macro F1: 0.733245
+risk_suicidal_ideation (support 28): Precision 0.653846; Recall 0.607143; F1 0.629630.
+True risk_suicidal_ideation predicted as risk_passive: 8.
+Total errors: 66.
+Status: VALID REFERENCE MODEL. This describes the evaluation baseline; it does not identify or replace the production artifact.
+
+2. AUGMENTED V1
+---------------
+Additional reviewed training examples: 73, from dataset/risk_augmented_reviewed.csv.
+Total train size: 1,041 (original 968 + 73); test size remains 243.
+Accuracy: 0.740741 (delta vs baseline +0.012346)
+Macro Precision: 0.748624 (delta +0.013242)
+Macro Recall: 0.742837 (delta +0.010302)
+Macro F1: 0.742785 (reported delta +0.009539)
+risk_suicidal_ideation (support 28):
+  Precision 0.714286 (delta vs baseline +0.060440)
+  Recall 0.535714 (delta -0.071429)
+  F1 0.612245 (delta -0.017385)
+True risk_suicidal_ideation predicted as risk_passive: 10 (baseline +2).
+Total errors: 63 (baseline -3).
+Status: VALID EXPERIMENTAL MODEL, not selected as production.
+
+3. AUGMENTED V2
+---------------
+Additional final ideation v2 examples: 28, from dataset/risk_suicidal_ideation_final_v2.csv.
+Total augmentation: 73 reviewed v1 + 28 final ideation v2 = 101 training-only examples.
+Total train size: 1,069 (original 968 + 101); test size remains 243.
+Metric                       V2         Delta vs baseline   Delta vs v1
+Accuracy                     0.748971   +0.020576           +0.008230
+Macro Precision              0.759120   +0.023738           +0.010496
+Macro Recall                 0.749247   +0.016712           +0.006410
+Macro F1                     0.749646   ~+0.016400          +0.006861
+risk_suicidal_ideation (support 28):
+  Precision 0.789474 (delta vs baseline +0.135628; delta vs v1 +0.075188)
+  Recall 0.535714 (delta vs baseline -0.071429; delta vs v1 +0.000000)
+  F1 0.638298 (delta vs baseline +0.008668; delta vs v1 +0.026053)
+True risk_suicidal_ideation predicted as risk_passive: 10 (baseline +2; v1 +0).
+Total errors: 61 (baseline -5; v1 -2).
+Status: EXPERIMENTAL CANDIDATE. V2 has the best overall holdout Accuracy, Macro Precision, Macro Recall, and Macro F1 of these three configurations. It did not improve suicidal_ideation recall from v1 and left all 10 ideation-to-passive errors.
+Delta note: the original comparison records v1-minus-baseline Macro F1 as +0.009539 and v2-minus-v1 as +0.006861. Their sum is approximately +0.016400. Subtracting the displayed six-decimal metrics can differ by 0.000001 because of rounding.
+
+4. REPRODUCIBILITY AND DATA LINEAGE
+-----------------------------------
+Original dataset: 1,211 rows; original train 968 and primary holdout 243.
+The same 243 test rows were used for baseline, v1, and v2.
+Shared test-set SHA-256: 6d9a1d38230c1d35f4080fef7309937cc07edd2f9e80c8961a738d4603531d44.
+The v2 experiment verified this hash matched the previous experiment before training. Baseline and v1 metrics and wrong-row predictions reproduced the previous experiment.
+Algorithm, TF-IDF settings, calibration, random_state, and hyperparameters were carried from the prior experiment; no production model file was saved by these evaluations.
+Normalized-text overlap of each augmentation with the shared test set: v1 0; v2 0. Augmentation examples were added to training only.
+The ideation-v2 candidate underwent Human Review: 33 original candidates yielded 23 original KEEP, 6 REWRITE, and 4 original DROP; all 6 rewrites were kept, making 29 reviewed examples. Final Human Check retained 3 of 4 flagged rows and dropped original row 24, yielding the frozen 28-row v2 file. Its freeze audit reports no missing values, malformed rows, or exact text duplicates against itself, risk.csv, or risk_augmented_reviewed.csv. These statements are provenance and integrity findings, not clinical certification.
+
+5. PERSISTENT ERROR ANALYSIS
+----------------------------
+True risk_suicidal_ideation predicted as risk_passive: baseline 8, v1 10, v2 10.
+The same 10 target test rows remained errors under v1 and v2; v2 did not reduce this group.
+For 9 of those 10 wrong passive predictions, v2 prediction confidence was higher than v1; it decreased on one row.
+The detailed audit notes overlapping wording and indirect expressions across the label boundary. Similarity scores are review aids only and do not determine label validity.
+
+6. HUMAN REVIEW OF THE 10 PERSISTENT ERRORS
+-------------------------------------------
+Validated internal Human Review metadata (10/10 rows; no blank or invalid decision fields):
+  POSSIBLE_OTHER_LABEL: 9
+  AMBIGUOUS: 1
+  CONFIRM_IDEATION: 0
+  NEED_EXPERT_REVIEW: 0
+Possible alternative label counts: depression 7; stress 3; none, risk_passive, risk_suicide_plan, risk_immediate_danger, and other 0.
+ผล Human Review ภายในโครงการชี้ว่ากรณี persistent errors อาจเกี่ยวข้องกับ annotation ambiguity และ label boundary แต่ยังไม่ถือเป็นหลักฐานว่า original test labels ผิด เนื่องจากยังไม่มี expert/clinical review
+Alternative labels are reviewer observations only. The original true labels, holdout membership, and reported evaluation metrics remain unchanged.
+
+7. MODEL STATUS
+---------------
+Baseline: VALID REFERENCE MODEL.
+V1: VALID EXPERIMENTAL MODEL.
+V2: EXPERIMENTAL CANDIDATE; best overall holdout metrics among the three experiments, but no ideation recall gain over v1 and 10 persistent ideation-to-passive errors.
+Production: KEEP CURRENT PRODUCTION MODEL UNCHANGED. V2 has not been selected, deployed, or substituted for production.
+
+8. PROJECT DECISION AT THIS FREEZE POINT
+-----------------------------------------
+- Stop further Risk augmentation for now.
+- Freeze the primary 243-row holdout and its recorded SHA-256; do not relabel holdout rows.
+- Do not create a third augmentation round or use test rows in training.
+- Retain v2 as an experimental candidate only.
+- If expert review becomes available later, revisit annotation and label-boundary questions before any further model decision; do not change labels automatically.
+- Continue with other parts of the project.
+
+9. LIMITATIONS FOR REPORTING
+----------------------------
+- The fixed holdout contains only 243 rows; a single split does not establish broad statistical significance.
+- Labels are project-level annotations, not clinically validated ground truth.
+- This internal Human Review is not expert or clinical validation and cannot establish that original test labels are wrong.
+- Persistent boundary cases remain among risk categories, especially risk_passive versus risk_suicidal_ideation.
+- Augmentation data was generated and screened within the project; its coverage and provenance limit generalization.
+- Better aggregate metrics do not demonstrate clinical safety or safe behavior for every risk category.
+- V2's ideation recall equals v1's and remains below baseline, despite higher overall scores.
+
+10. FILE FREEZE INFORMATION
+---------------------------
+Paths below are relative to the project root stated above. SHA-256 hashes were verified at record creation.
+dataset/risk.csv
+  36e4fdaf58441e156772d477e56180bd9785ea831f73c935d786a965e21e717e
+dataset/risk_augmented_reviewed.csv
+  25fa3dfa89349480680c67aa344494c849a594ada0ed4c33fc26b5dbeb68bdbb
+dataset/risk_suicidal_ideation_final_v2.csv
+  12b4293cdadf6dae4502a031d86cb9a2e052f7b78011a4a65d8e41bdf632f055
+evaluation/risk_augmentation_v2/comparison.txt
+  9433ca90b6684cf97c79f9390dac813947422424498b98b8d0fa7de0018e7e63
+evaluation/risk_augmentation_v2/persistent_ideation_human_review.csv
+  b5e7a828bfed93b0a6b6130f4bc5e3c6eac592d93096714dab63a5cd98512ea9
+Freeze rule: Do not edit these source files as part of finalization. Record any future approved changes as a new documented version.
+
+Finalization output: evaluation/risk_finalization/risk_model_finalization.txt
