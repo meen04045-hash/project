@@ -266,7 +266,7 @@ style_vectorizer, style_model = get_model("style", "dataset/conversation_style.c
 
 def predict_with_confidence(model: CalibratedClassifierCV, vectorizer: TfidfVectorizer, text: str) -> tuple[str, float]:
     transformed_text = vectorizer.transform([clean_text(text)])
-    prediction = model.predict(transformed_text)[0]
+    prediction = str(model.predict(transformed_text)[0])
     confidence = float(model.predict_proba(transformed_text)[0].max())
     return prediction, confidence
 
