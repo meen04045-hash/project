@@ -80,6 +80,48 @@ def save_result(user_id, text):
     })
 
 
+PENDING_ADVICE = "offer_coping_advice"
+AFFIRMATIVE_REPLIES = {
+    "ได้เลย", "โอเค", "ได้ครับ", "ได้ค่ะ", "เอาเลย", "ลองดู",
+    "ครับ", "ค่ะ", "ตกลง", "ยินดี", "เอาครับ", "เอาค่ะ"
+}
+NEGATIVE_REPLIES = {
+    "ไม่เป็นไร", "ไม่เอา", "ไม่ต้อง", "ไว้ก่อน", "ยังไม่อยาก",
+    "ขอบคุณครับ", "ขอบคุณค่ะ"
+}
+SELF_CARE_TIPS = (
+    "💚 คำแนะนำการดูแลตนเองเบื้องต้น:\n\n"
+    "1. 💤 นอนหลับพักผ่อนให้เพียงพอ 6-8 ชั่วโมงต่อวัน\n"
+    "2. 🏃‍♂️ ออกกำลังกายสม่ำเสมออย่างน้อย 30 นาทีต่อวัน\n"
+    "3. 🗣️ พูดคุยระบายความรู้สึกกับคนที่ไว้ใจ\n"
+    "4. 🎨 ทำกิจกรรมนันทนาการหรือสิ่งที่ตนเองชอบเพื่อผ่อนคลาย"
+)
+
+
+def get_pending_action(user_id):
+    if not user_id:
+        return None
+    try:
+        state = db.collection("conversation_state").document(user_id).get().to_dict() or {}
+        return state.get("pending_action")
+    except Exception as e:
+        print("STATE READ ERROR:", type(e).__name__)
+        return None
+
+
+def set_pending_action(user_id, action):
+    if not user_id:
+        return
+    try:
+        state_ref = db.collection("conversation_state").document(user_id)
+        if action is None:
+            state_ref.delete()
+        else:
+            state_ref.set({"pending_action": action})
+    except Exception as e:
+        print("STATE WRITE ERROR:", type(e).__name__)
+
+
 # =====================================
 # NORMAL CHAT
 # =====================================
@@ -581,6 +623,8 @@ def handle_message(event):
 
     if text == "ประเมิน":
 
+        set_pending_action(user_id, None)
+
         template = ButtonsTemplate(
 
             title="แบบประเมินสุขภาพจิต",
@@ -618,18 +662,7 @@ def handle_message(event):
 
     elif text == "คำแนะนำการดูแลตนเอง":
 
-        self_care_tips = (
-
-            "💚 คำแนะนำการดูแลตนเองเบื้องต้น:\n\n"
-
-            "1. 💤 นอนหลับพักผ่อนให้เพียงพอ 6-8 ชั่วโมงต่อวัน\n"
-
-            "2. 🏃‍♂️ ออกกำลังกายสม่ำเสมออย่างน้อย 30 นาทีต่อวัน\n"
-
-            "3. 🗣️ พูดคุยระบายความรู้สึกกับคนที่ไว้ใจ\n"
-
-            "4. 🎨 ทำกิจกรรมนันทนาการหรือสิ่งที่ตนเองชอบเพื่อผ่อนคลาย"
-        )
+        set_pending_action(user_id, None)
 
         quick_reply = QuickReply(
 
@@ -664,7 +697,7 @@ def handle_message(event):
             event.reply_token,
 
             TextSendMessage(
-                text=self_care_tips,
+                text=SELF_CARE_TIPS,
                 quick_reply=quick_reply
             )
         )
@@ -676,6 +709,7 @@ def handle_message(event):
     # AI PREDICT
     # =================================
 
+    pending_action = get_pending_action(user_id)
     result = predict_all(text)
 
     risk = result["risk"]
@@ -795,11 +829,15 @@ def handle_message(event):
     # FINAL SAFETY DECISION
     # =================================
 
+    offered_advice = False
     if (
         explicit_safety
         or risk_is_high
         or intent_is_crisis
     ):
+
+        if pending_action:
+            set_pending_action(user_id, None)
 
         reply = (
 
@@ -818,7 +856,20 @@ def handle_message(event):
     # NORMAL RESPONSE
     # =================================
 
+    elif pending_action == PENDING_ADVICE and text in AFFIRMATIVE_REPLIES:
+
+        set_pending_action(user_id, None)
+        reply = SELF_CARE_TIPS
+
+    elif pending_action == PENDING_ADVICE and text in NEGATIVE_REPLIES:
+
+        set_pending_action(user_id, None)
+        reply = reply_normal(text)
+
     else:
+
+        if pending_action:
+            set_pending_action(user_id, None)
 
         replies = []
 
@@ -877,6 +928,9 @@ def handle_message(event):
 
 
             if s_reply:
+
+                if support == "advice":
+                    offered_advice = True
 
                 replies.append(
                     s_reply
@@ -982,6 +1036,9 @@ def handle_message(event):
 
         )
     )
+
+    if offered_advice:
+        set_pending_action(user_id, PENDING_ADVICE)
 
 
 # =====================================
