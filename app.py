@@ -22,10 +22,7 @@ from linebot.models import (
     TextSendMessage,
     TemplateSendMessage,
     ButtonsTemplate,
-    URIAction,
-    QuickReply,
-    QuickReplyButton,
-    MessageAction
+    URIAction
 )
 
 from firebase_admin import credentials, firestore
@@ -664,41 +661,12 @@ def handle_message(event):
 
         set_pending_action(user_id, None)
 
-        quick_reply = QuickReply(
-
-            items=[
-
-                QuickReplyButton(
-                    action=MessageAction(
-                        label="💬 อยากระบายความรู้สึก",
-                        text="อยากระบายความรู้สึก"
-                    )
-                ),
-
-                QuickReplyButton(
-                    action=MessageAction(
-                        label="😰 เครียด / กังวล",
-                        text="เครียด / กังวล"
-                    )
-                ),
-
-                QuickReplyButton(
-                    action=MessageAction(
-                        label="📝 ประเมินสุขภาพจิต",
-                        text="ประเมิน"
-                    )
-                )
-
-            ]
-        )
-
         line_bot_api.reply_message(
 
             event.reply_token,
 
             TextSendMessage(
-                text=SELF_CARE_TIPS,
-                quick_reply=quick_reply
+                text=SELF_CARE_TIPS
             )
         )
 
@@ -965,64 +933,8 @@ def handle_message(event):
 
 
     # =================================
-    # SEND WITH QUICK REPLIES
+    # SEND REPLY
     # =================================
-
-    quick_reply = QuickReply(
-
-        items=[
-
-            QuickReplyButton(
-
-                action=MessageAction(
-
-                    label="💬 อยากระบายความรู้สึก",
-
-                    text="อยากระบายความรู้สึก"
-
-                )
-
-            ),
-
-            QuickReplyButton(
-
-                action=MessageAction(
-
-                    label="😰 เครียด / กังวล",
-
-                    text="เครียด / กังวล"
-
-                )
-
-            ),
-
-            QuickReplyButton(
-
-                action=MessageAction(
-
-                    label="💚 คำแนะนำดูแลตนเอง",
-
-                    text="คำแนะนำการดูแลตนเอง"
-
-                )
-
-            ),
-
-            QuickReplyButton(
-
-                action=MessageAction(
-
-                    label="📝 ประเมินอีกครั้ง",
-
-                    text="ประเมิน"
-
-                )
-
-            )
-
-        ]
-    )
-
 
     line_bot_api.reply_message(
 
@@ -1030,9 +942,7 @@ def handle_message(event):
 
         TextSendMessage(
 
-            text=reply,
-
-            quick_reply=quick_reply
+            text=reply
 
         )
     )
