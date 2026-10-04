@@ -13,6 +13,7 @@ load_dotenv()
 from flask import Flask, json, jsonify, request, abort, render_template
 
 from ai_model import predict_all
+from responses import compose_response, select_phase1_route
 
 from linebot import LineBotApi, WebhookHandler
 from linebot.exceptions import InvalidSignatureError
@@ -798,6 +799,11 @@ def handle_message(event):
     # =================================
 
     offered_advice = False
+    ordinary_route = select_phase1_route(
+        text,
+        eligible_intent=intent if result["intent_conf"] >= SUPPORT_THRESHOLD else None,
+        eligible_support=support if result["support_conf"] >= SUPPORT_THRESHOLD else None,
+    )
     if (
         explicit_safety
         or risk_is_high
@@ -834,28 +840,44 @@ def handle_message(event):
         set_pending_action(user_id, None)
         reply = reply_normal(text)
 
-    elif (
-        any(phrase in text for phrase in (
-            "ช่วยแนะนำหน่อย", "ขอคำแนะนำหน่อย", "แนะนำหน่อย",
-            "ควรทำยังไง", "มีวิธีรับมือไหม", "ช่วยบอกวิธีหน่อย"
-        ))
-        or (intent == "ask_advice" and result["intent_conf"] >= SUPPORT_THRESHOLD)
-    ):
+    elif ordinary_route == "direct_advice":
 
         if pending_action:
             set_pending_action(user_id, None)
 
-        reply = (
-            "ฟังดูเหมือนคุณกำลังเจอเรื่องที่หนักใจและอยากหาวิธีรับมือนะครับ\n\n"
-            "ลองเขียนสิ่งที่ต้องจัดการออกมา แยกเรื่องเร่งด่วนกับเรื่องที่รอได้ "
-            "แล้วเลือกทำทีละขั้นเล็ก ๆ พร้อมพักสั้น ๆ ระหว่างทาง\n\n"
-            "ถ้าคุณอยากเล่ารายละเอียดเพิ่ม ผมจะช่วยคิดขั้นตอนถัดไปด้วยครับ"
-        )
+        reply = compose_response(
+            text,
+            route=ordinary_route,
+            emotion=emotion if result["emotion_conf"] >= EMOTION_THRESHOLD else None,
+            problem=problem if result["problem_conf"] >= PROBLEM_THRESHOLD else None,
+            style=style if result["style_conf"] >= STYLE_THRESHOLD else None,
+        ).text
 
     else:
 
+        had_pending_action = bool(pending_action)
         if pending_action:
             set_pending_action(user_id, None)
+
+        # Keep pending, information, and crisis-support responses on their existing path.
+        if not had_pending_action and intent != "information" and not (
+            result["support_conf"] >= SUPPORT_THRESHOLD
+            and support in ("information", "crisis_support")
+        ):
+            draft = compose_response(
+                text,
+                route=ordinary_route,
+                emotion=emotion if result["emotion_conf"] >= EMOTION_THRESHOLD else None,
+                problem=problem if result["problem_conf"] >= PROBLEM_THRESHOLD else None,
+                style=style if result["style_conf"] >= STYLE_THRESHOLD else None,
+            )
+            line_bot_api.reply_message(
+                event.reply_token,
+                TextSendMessage(text=draft.text),
+            )
+            if draft.offer_pending_advice:
+                set_pending_action(user_id, PENDING_ADVICE)
+            return
 
         replies = []
 
