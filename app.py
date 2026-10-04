@@ -834,6 +834,24 @@ def handle_message(event):
         set_pending_action(user_id, None)
         reply = reply_normal(text)
 
+    elif (
+        any(phrase in text for phrase in (
+            "ช่วยแนะนำหน่อย", "ขอคำแนะนำหน่อย", "แนะนำหน่อย",
+            "ควรทำยังไง", "มีวิธีรับมือไหม", "ช่วยบอกวิธีหน่อย"
+        ))
+        or (intent == "ask_advice" and result["intent_conf"] >= SUPPORT_THRESHOLD)
+    ):
+
+        if pending_action:
+            set_pending_action(user_id, None)
+
+        reply = (
+            "ฟังดูเหมือนคุณกำลังเจอเรื่องที่หนักใจและอยากหาวิธีรับมือนะครับ\n\n"
+            "ลองเขียนสิ่งที่ต้องจัดการออกมา แยกเรื่องเร่งด่วนกับเรื่องที่รอได้ "
+            "แล้วเลือกทำทีละขั้นเล็ก ๆ พร้อมพักสั้น ๆ ระหว่างทาง\n\n"
+            "ถ้าคุณอยากเล่ารายละเอียดเพิ่ม ผมจะช่วยคิดขั้นตอนถัดไปด้วยครับ"
+        )
+
     else:
 
         if pending_action:
