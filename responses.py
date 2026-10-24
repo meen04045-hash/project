@@ -122,6 +122,27 @@ DIRECT_ADVICE_BY_PROBLEM = {
     "none": "ถ้ายังไม่รู้ว่าจะเริ่มแก้ตรงไหน ลองเลือกมาก่อนหนึ่งเรื่องที่อยากให้ดีขึ้นที่สุด แล้วค่อยเริ่มจากก้าวเล็ก ๆ ที่พอทำได้ครับ",
 }
 
+BOT_IDENTITY = "ผมเป็นแชทบอทของโครงการนี้ครับ เรียกผมว่าบอทได้เลย ผมไม่ใช่มนุษย์หรือผู้เชี่ยวชาญทางการแพทย์"
+FRIEND_CONFLICT_ACK = "คุณมีเรื่องไม่สบายใจกับเพื่อนอยู่ ผมรับฟังเรื่องนี้ได้นะครับ"
+FRIEND_CONFLICT_ADVICE = (
+    "ถ้าไม่สบายใจกับเพื่อน ลองเว้นจังหวะให้ใจสงบก่อนครับ "
+    "เมื่อพร้อมและปลอดภัย เลือกประเด็นหนึ่งที่อยากคุย แล้วบอกว่าเหตุการณ์นั้นทำให้คุณรู้สึกอย่างไร"
+)
+FRIEND_ADVICE_CLARIFICATION = (
+    "ได้ครับ อยากปรึกษาเรื่องไหนเกี่ยวกับเพื่อน เช่น การสื่อสารหรือการรักษาความสัมพันธ์ "
+    "เล่าเฉพาะส่วนที่สะดวกได้ครับ"
+)
+POSITIVE_THINKING_ADVICE = (
+    "การคิดบวกไม่จำเป็นต้องฝืนให้รู้สึกดีครับ "
+    "ลองแยกสิ่งที่กังวลออกจากสิ่งที่พอจัดการได้ตอนนี้ แล้วเลือกทำก้าวเล็ก ๆ อย่างหนึ่งก่อน"
+)
+FEEDBACK_REPLIES = {
+    "already_told": "ขอโทษที่ถามซ้ำครับ ผมเชื่อมโยงรายละเอียดจากข้อความก่อนหน้าไม่ได้ในตอนนี้ จึงไม่อยากเดาเรื่องที่คุณเล่า",
+    "frustrated": "ขอโทษที่ตอบไม่ตรงประเด็นครับ ผมจะพยายามตอบคำถามล่าสุดให้ตรงขึ้น",
+    "dislike": "รับทราบครับ ผมจะไม่ชวนให้เล่าซ้ำ หากต้องการถามเรื่องใดโดยตรง ผมจะตอบจากข้อความนั้น",
+}
+BOREDOM_ACK = "ฟังดูว่าวันนี้คุณรู้สึกเบื่ออยู่มากนะครับ ถ้าสะดวก อาจลองเปลี่ยนอิริยาบถหรือทำสิ่งเล็ก ๆ ที่สนใจสักพัก"
+
 VENTING = (
     "ฟังแล้วรู้สึกว่าเรื่องนี้คงหนักใจอยู่ไม่น้อยเลยนะ ถ้าอยากระบายเพิ่มเติมก็ค่อย ๆ เล่าได้ครับ",
     "เรื่องนี้อาจมีหลายอย่างปนกันอยู่ เล่าเฉพาะส่วนที่อยากเล่าก่อนได้ครับ",
@@ -159,8 +180,33 @@ STYLE_RULES = {
 DIRECT_ADVICE_PHRASES = (
     "ช่วยแนะนำหน่อย", "ขอคำแนะนำหน่อย", "แนะนำหน่อย",
     "ควรทำยังไง", "มีวิธีรับมือไหม", "ช่วยบอกวิธีหน่อย",
-    "ช่วยแนะนำวิธี",
+    "ช่วยแนะนำวิธี", "ต้องทำยังไง", "อยากได้คำแนะนำ",
 )
+
+
+def is_friend_advice_request(text: str) -> bool:
+    for phrase in ("อยากให้แนะนำเรื่องเพื่อน", "ขอคำแนะนำเรื่องเพื่อน", "ช่วยแนะนำเรื่องเพื่อน"):
+        start = text.find(phrase)
+        while start != -1:
+            before = text[:start].rstrip(' \t"“')
+            if not before.endswith(("คำว่า", "อยากรู้ว่า", "ถามว่า")):
+                return True
+            start = text.find(phrase, start + len(phrase))
+    return False
+
+
+def is_friend_conflict(text: str) -> bool:
+    for phrase in ("ทะเลาะกับเพื่อน", "ไม่สบายใจกับเพื่อน", "มีปัญหากับเพื่อน"):
+        start = text.find(phrase)
+        while start != -1:
+            before = text[:start].rstrip(' \t"“')
+            if not before.endswith((
+                "ไม่ได้", "ไม่เคย", "ไม่", "อยากรู้ว่า", "คำว่า", "ถามว่า",
+                "เขา", "เพื่อน", "เพื่อนฉัน",
+            )):
+                return True
+            start = text.find(phrase, start + len(phrase))
+    return False
 
 
 @dataclass(frozen=True)
@@ -210,12 +256,29 @@ def get_direct_advice(problem: str | None) -> Fragment:
 def select_phase1_route(
     text: str, *, eligible_intent: str | None, eligible_support: str | None
 ) -> str:
-    if any(phrase in text for phrase in ("แค่อยากให้ฟัง", "อยากให้ฟัง", "ยังไม่ต้องแนะนำ")):
+    if any(phrase in text for phrase in ("แค่อยากให้ฟัง", "อยากให้ฟัง", "ยังไม่ต้องแนะนำ", "ไม่ต้องแนะนำ", "ไม่อยากได้คำแนะนำ", "ไม่อยากให้แนะนำ", "ไม่ได้อยากให้แนะนำ")):
         return "listener"
     if "อยากระบาย" in text or "ขอระบาย" in text:
         return "venting"
+    simple_text = text.strip().rstrip("?!？！.。")
+    if simple_text in ("คุณชื่ออะไร", "เธอชื่ออะไร", "บอทชื่ออะไร", "คุณคือใคร"):
+        return "bot_identity"
+    if simple_text in ("ฉันบอกไปแล้ว", "บอกไปแล้ว", "ก็บอกไปแล้ว"):
+        return "feedback_already_told"
+    if simple_text in ("ทำไมโง่จัง", "โง่จัง"):
+        return "feedback_frustrated"
+    if simple_text in ("ฉันเกลียดเธอ", "เกลียดเธอ"):
+        return "feedback_dislike"
+    if "คิดบวก" in text and any(phrase in text for phrase in ("แนะนำ", "คำแนะนำ", "วิธี")):
+        return "positive_thinking_advice"
+    if is_friend_advice_request(text):
+        return "direct_advice"
     if any(phrase in text for phrase in DIRECT_ADVICE_PHRASES):
         return "direct_advice"
+    if is_friend_conflict(text):
+        return "friend_conflict"
+    if simple_text in ("ฉันเบื่อทั้งวัน", "เบื่อทั้งวัน", "วันนี้เบื่อทั้งวัน"):
+        return "boredom"
     if eligible_intent == "ask_advice":
         return "direct_advice"
     if eligible_intent in ("venting", "emotional_support", "smalltalk"):
@@ -251,9 +314,24 @@ def compose_response(
     problem: str | None = None, style: str | None = None,
     choose: Chooser = choice,
 ) -> ResponseDraft:
+    if route == "bot_identity":
+        return ResponseDraft(BOT_IDENTITY, route)
+    if route in ("feedback_already_told", "feedback_frustrated", "feedback_dislike"):
+        return ResponseDraft(FEEDBACK_REPLIES[route.removeprefix("feedback_")], route)
+    if route == "friend_conflict":
+        return ResponseDraft(FRIEND_CONFLICT_ACK, route, semantic_tags=("acknowledgement",))
+    if route == "boredom":
+        return ResponseDraft(BOREDOM_ACK, route, semantic_tags=("acknowledgement", "action"))
+    if route == "positive_thinking_advice":
+        return ResponseDraft(POSITIVE_THINKING_ADVICE, route, semantic_tags=("action",))
     if route == "direct_advice":
         # A direct style keeps only the practical step; other styles may acknowledge emotion.
-        fragments = [get_direct_advice(problem)]
+        if not is_friend_conflict(text) and is_friend_advice_request(text):
+            return ResponseDraft(FRIEND_ADVICE_CLARIFICATION, route, semantic_tags=("invitation",))
+        fragments = [
+            Fragment(FRIEND_CONFLICT_ADVICE, "action", "first_step")
+            if is_friend_conflict(text) else get_direct_advice(problem)
+        ]
         acknowledgement = (
             get_emotion_ack(emotion, choose=choose)
             if emotion != "neutral" and STYLE_RULES.get(style) != "action_first" else None

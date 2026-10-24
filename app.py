@@ -840,7 +840,11 @@ def handle_message(event):
         set_pending_action(user_id, None)
         reply = reply_normal(text)
 
-    elif ordinary_route == "direct_advice":
+    elif ordinary_route in (
+        "direct_advice", "positive_thinking_advice", "bot_identity",
+        "friend_conflict", "boredom", "feedback_already_told",
+        "feedback_frustrated", "feedback_dislike",
+    ):
 
         if pending_action:
             set_pending_action(user_id, None)
