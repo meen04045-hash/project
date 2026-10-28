@@ -1,6 +1,7 @@
 """Isolated TEST-only contact form service; never imports the chatbot app."""
 
 import os
+import re
 
 from flask import Flask, jsonify
 
@@ -46,10 +47,15 @@ def create_app(identity_verifier=None):
     channel_id = os.environ.get("RISK_CONTACT_TEST_LINE_LOGIN_CHANNEL_ID", "")
     if not all(settings.values()) or not channel_id:
         raise RuntimeError("Contact TEST service configuration is incomplete")
+    raw_allowlist = os.environ.get("RISK_CONTACT_TEST_ALLOWED_SUBJECT_KEYS", "")
+    entries = raw_allowlist.split(",") if raw_allowlist else []
+    if any(not re.fullmatch(r"[0-9a-f]{64}", entry) for entry in entries) or len(entries) != len(set(entries)):
+        raise RuntimeError("Invalid TEST identity allowlist")
     db = create_contact_test_client()
     app = Flask(__name__)
     register_risk_demo(app, db, channel_id, identity_verifier=identity_verifier,
-                       contact_only=True, contact_settings=settings)
+                       contact_only=True, contact_settings=settings,
+                       allowed_subject_keys=frozenset(entries))
 
     @app.get("/health")
     def health():

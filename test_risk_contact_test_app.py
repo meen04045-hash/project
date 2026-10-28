@@ -1,6 +1,8 @@
 """Isolated TEST entrypoint checks. All Firestore and LINE calls are mocked."""
 
 import copy
+import hashlib
+import hmac
 import importlib
 import os
 import unittest
@@ -55,6 +57,13 @@ TEST_ENV = {
 }
 
 
+def allowed_key(sub):
+    return hmac.new(TEST_ENV["RISK_CONTACT_TEST_IDENTITY_HMAC_KEY"].encode(),
+                    ("subject:" + sub).encode(), hashlib.sha256).hexdigest()
+
+TEST_ENV["RISK_CONTACT_TEST_ALLOWED_SUBJECT_KEYS"] = allowed_key("synthetic-user-a")
+
+
 class IsolatedContactAppTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -68,8 +77,8 @@ class IsolatedContactAppTests(unittest.TestCase):
     def setUp(self):
         self.db.store.clear()
 
-    def make_app(self, verifier=lambda token, channel: "synthetic-user-a"):
-        with patch.dict(os.environ, TEST_ENV, clear=True), \
+    def make_app(self, verifier=lambda token, channel: "synthetic-user-a", env=None):
+        with patch.dict(os.environ, env if env is not None else TEST_ENV, clear=True), \
                 patch.object(self.module, "create_contact_test_client", return_value=self.db):
             return self.module.create_app(identity_verifier=verifier)
 
@@ -87,6 +96,7 @@ class IsolatedContactAppTests(unittest.TestCase):
         self.assertEqual(health.status_code, 200)
         self.assertEqual(health.json, {"status": "ok"})
         self.assertEqual(health.headers["Cache-Control"], "no-store")
+        self.assertIn("ข้อมูลสมมติ", client.get("/demo/contact-form").get_data(as_text=True))
         for path in ("/callback", "/send", "/demo/reviewer",
                      "/demo/api/cases/sample", "/demo/api/events/simulate"):
             with self.subTest(path=path):
@@ -154,7 +164,7 @@ class IsolatedContactAppTests(unittest.TestCase):
             factory.assert_not_called()
 
     def test_missing_and_conflicting_configuration_fails_before_client_creation(self):
-        for missing in TEST_ENV:
+        for missing in TEST_ENV.keys() - {"RISK_CONTACT_TEST_ALLOWED_SUBJECT_KEYS"}:
             with self.subTest(missing=missing), patch.dict(os.environ, {
                     **TEST_ENV, missing: ""}, clear=True), \
                     patch.object(self.module, "create_contact_test_client") as create_client:
@@ -202,11 +212,12 @@ class IsolatedContactAppTests(unittest.TestCase):
         payload = {"preferred_name": "Test A", "contact_method": "none",
                    "contact_value": "", "consent": True}
         self.assertEqual(client.put("/demo/api/contact", json=payload, headers=a).status_code, 200)
+        self.assertIn("risk_demo_contacts/" + allowed_key("synthetic-user-a"), self.db.store)
         self.assertEqual(client.get("/demo/api/contact", headers=a).json["preferred_name"], "Test A")
-        self.assertEqual(client.get("/demo/api/contact", headers=b).json, {"consent": False})
+        self.assertEqual(client.get("/demo/api/contact", headers=b).status_code, 403)
         self.assertEqual(client.delete("/demo/api/contact", headers=a).status_code, 200)
         self.assertEqual(client.get("/demo/api/contact", headers=a).json, {"consent": False})
-        self.assertEqual(client.get("/demo/api/contact", headers=b).json, {"consent": False})
+        self.assertEqual(client.get("/demo/api/contact", headers=b).status_code, 403)
         self.assertTrue(all(path.startswith("risk_demo_contacts/") for path in self.db.store))
         self.assertFalse(any("synthetic-user-a" in path for path in self.db.store))
 
@@ -218,6 +229,85 @@ class IsolatedContactAppTests(unittest.TestCase):
                               headers={"Authorization": "Bearer synthetic-token-a"})
         self.assertEqual(response.status_code, 400)
         self.assertEqual(self.db.store, {})
+
+    def test_allowlist_missing_empty_and_malformed_fail_closed(self):
+        for raw in (None, ""):
+            with self.subTest(raw=raw):
+                env = {**TEST_ENV, "RISK_CONTACT_TEST_ALLOWED_SUBJECT_KEYS": raw or ""}
+                client = self.make_app(env=env).test_client()
+                self.assertEqual(client.get("/demo/api/contact", headers={
+                    "Authorization": "Bearer synthetic-token"}).status_code, 403)
+                self.assertEqual(self.db.store, {})
+        good = allowed_key("synthetic-user-a")
+        for raw in ("wrong", good + ",", good + "," + good, good.upper(), " " + good):
+            with self.subTest(raw=raw), patch.dict(os.environ, {
+                    **TEST_ENV, "RISK_CONTACT_TEST_ALLOWED_SUBJECT_KEYS": raw}, clear=True), \
+                    patch.object(self.module, "create_contact_test_client") as factory:
+                with self.assertRaisesRegex(RuntimeError, "allowlist"):
+                    self.module.create_app()
+                factory.assert_not_called()
+
+    def test_unapproved_verified_sub_has_no_contact_reads_or_writes(self):
+        client = self.make_app(lambda token, channel: "synthetic-user-b").test_client()
+        headers = {"Authorization": "Bearer synthetic-token"}
+        payload = {"preferred_name": "Test B", "contact_method": "none",
+                   "contact_value": "", "consent": True}
+        for method in ("GET", "PUT", "DELETE"):
+            with self.subTest(method=method), patch.object(self.db, "collection", wraps=self.db.collection) as collection:
+                response = client.open("/demo/api/contact", method=method,
+                                       json=payload if method == "PUT" else None, headers=headers)
+                self.assertEqual(response.status_code, 403)
+                collection.assert_not_called()
+        self.assertEqual(self.db.store, {})
+
+    def test_two_approved_subjects_are_isolated_and_spoofing_fails(self):
+        env = {**TEST_ENV, "RISK_CONTACT_TEST_ALLOWED_SUBJECT_KEYS": ",".join(
+            (allowed_key("synthetic-user-a"), allowed_key("synthetic-user-b")))}
+        verifier = lambda token, channel: {"a": "synthetic-user-a", "b": "synthetic-user-b"}.get(token)
+        client = self.make_app(verifier, env).test_client()
+        payload = {"preferred_name": "Test A", "contact_method": "none",
+                   "contact_value": "", "consent": True}
+        self.assertEqual(client.put("/demo/api/contact", json=payload,
+                                    headers={"Authorization": "Bearer a"}).status_code, 200)
+        self.assertEqual(client.get("/demo/api/contact?user_id=synthetic-user-a",
+                                    headers={"Authorization": "Bearer b"}).json, {"consent": False})
+        self.assertEqual(client.delete("/demo/api/contact?user_id=synthetic-user-a",
+                                       headers={"Authorization": "Bearer b"}).status_code, 200)
+        self.assertEqual(client.get("/demo/api/contact",
+                                    headers={"Authorization": "Bearer a"}).json["preferred_name"], "Test A")
+
+    def test_credential_email_is_pinned_before_admin_initialization(self):
+        import json
+        from risk_contact_test_client import create_contact_test_client, TEST_CLIENT_EMAIL
+        base = {"project_id": "heal-heart-b51de", "client_email": TEST_CLIENT_EMAIL}
+        for email in ("other@heal-heart-b51de.iam.gserviceaccount.com",
+                      "risk-contact-test@heal-heart-e869a.iam.gserviceaccount.com", ""):
+            with self.subTest(email=email), patch.dict(os.environ, {
+                    **TEST_ENV, "RISK_CONTACT_TEST_CREDENTIALS_JSON": json.dumps({**base, "client_email": email})}, clear=True), \
+                    patch("firebase_admin.initialize_app") as initialize, \
+                    patch("risk_contact_test_client.credentials.Certificate") as certificate:
+                with self.assertRaisesRegex(RuntimeError, "verification failed"):
+                    create_contact_test_client()
+                certificate.assert_not_called()
+                initialize.assert_not_called()
+        with patch.dict(os.environ, {**TEST_ENV,
+                "RISK_CONTACT_TEST_CREDENTIALS_JSON": json.dumps(base)}, clear=True), \
+                patch("risk_contact_test_client.credentials.Certificate") as certificate, \
+                patch("firebase_admin.initialize_app") as initialize, \
+                patch("risk_contact_test_client.firestore.client") as firestore_client:
+            certificate.return_value.project_id = base["project_id"]
+            initialize.return_value.project_id = base["project_id"]
+            firestore_client.return_value.project = base["project_id"]
+            self.assertIs(create_contact_test_client(), firestore_client.return_value)
+
+    def test_wrong_line_audience_and_issuer_are_rejected(self):
+        from risk_case_demo import verify_line_identity
+        import json
+        for claims in ({"sub": "synthetic-user-a", "aud": "wrong", "iss": "https://access.line.me"},
+                       {"sub": "synthetic-user-a", "aud": "synthetic-channel-id", "iss": "wrong"}):
+            with self.subTest(claims=claims), patch("risk_case_demo.urlopen") as urlopen:
+                urlopen.return_value.__enter__.return_value.read.return_value = json.dumps(claims).encode()
+                self.assertIsNone(verify_line_identity("synthetic-token", "synthetic-channel-id"))
 
 
 if __name__ == "__main__":

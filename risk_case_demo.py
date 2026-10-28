@@ -72,13 +72,16 @@ def verify_line_identity(id_token: str, client_id: str) -> str | None:
 
 def register_risk_demo(app, db, line_client_id: str, identity_verifier=None,
                        transaction_runner=None, enable_event_simulator=False,
-                       contact_only=False, contact_settings=None):
+                       contact_only=False, contact_settings=None,
+                       allowed_subject_keys=None):
     """Attach demo routes; refuse to start the demo without secure setup."""
     required = ["RISK_DEMO_IDENTITY_HMAC_KEY", "RISK_DEMO_LIFF_ID"]
     if not contact_only:
         required.extend(("RISK_DEMO_REVIEWER_USERNAME", "RISK_DEMO_REVIEWER_PASSWORD_HASH"))
     if contact_settings is not None and not contact_only:
         raise RuntimeError("Explicit contact settings require contact-only mode")
+    if allowed_subject_keys is not None and not contact_only:
+        raise RuntimeError("Explicit identity allowlist requires contact-only mode")
     config = ({name: contact_settings.get(name, "") for name in required}
               if contact_settings is not None else
               {name: os.environ.get(name, "") for name in required})
@@ -174,7 +177,10 @@ def register_risk_demo(app, db, line_client_id: str, identity_verifier=None,
             abort(503)
         if not isinstance(line_sub, str) or not line_sub:
             abort(401)
-        return subject_key(line_sub)
+        key = subject_key(line_sub)
+        if contact_only and key not in (allowed_subject_keys or ()):
+            abort(403)
+        return key
 
     def require_reviewer():
         state = reviewer_state()
