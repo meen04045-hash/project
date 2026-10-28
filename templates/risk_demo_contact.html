@@ -52,15 +52,22 @@
         headers: { 'Authorization': `Bearer ${idToken}`, 'Content-Type': 'application/json' },
         body: body ? JSON.stringify(body) : undefined
       });
-      if (!response.ok) throw new Error(`คำขอไม่สำเร็จ (${response.status})`);
+      if (!response.ok) {
+        const failure = new Error(`คำขอไม่สำเร็จ (${response.status})`);
+        failure.status = response.status;
+        throw failure;
+      }
       return response.json();
     }
     async function initialize() {
+      let stage = 'liff';
       try {
         await liff.init({ liffId });
         if (!liff.isLoggedIn()) { liff.login(); return; }
+        stage = 'token';
         idToken = liff.getIDToken();
         if (!idToken) throw new Error('ไม่พบ LINE ID token');
+        stage = 'contact';
         const contact = await api('/demo/api/contact', 'GET');
         if (contact.consent) {
           document.getElementById('preferred_name').value = contact.preferred_name;
@@ -72,7 +79,19 @@
         }
         save.disabled = false;
         setStatus(contact.consent ? 'โหลดข้อมูลที่เคยให้ความยินยอมแล้ว' : 'ยังไม่มีข้อมูลที่ได้รับความยินยอม');
-      } catch (error) { setStatus('เปิดฟอร์มไม่ได้ กรุณาตรวจการเข้าสู่ระบบ LINE และลองใหม่'); }
+      } catch (error) {
+        if (stage === 'contact' && error.status === 403) {
+          setStatus('บัญชี TEST นี้ยังไม่ได้รับอนุญาตให้ใช้แบบฟอร์ม');
+        } else if (stage === 'contact' && error.status === 401) {
+          setStatus('การยืนยันบัญชี LINE ไม่สำเร็จ กรุณาเข้าสู่ระบบใหม่');
+        } else if (stage === 'contact') {
+          setStatus('ติดต่อระบบข้อมูลติดต่อไม่สำเร็จ กรุณาลองใหม่ภายหลัง');
+        } else if (stage === 'token') {
+          setStatus('ไม่พบ LINE ID token กรุณาเปิดผ่าน TEST LIFF และลองใหม่');
+        } else {
+          setStatus('เริ่ม TEST LIFF ไม่สำเร็จ กรุณาตรวจการเข้าสู่ระบบ LINE และลองใหม่');
+        }
+      }
     }
     document.getElementById('contact-form').addEventListener('submit', async event => {
       event.preventDefault();
