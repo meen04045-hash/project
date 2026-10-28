@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>DEMO — ข้อมูลติดต่อสมัครใจ</title>
+  <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+  <style>
+    body { font: 16px/1.6 system-ui, sans-serif; max-width: 42rem; margin: 2rem auto; padding: 0 1rem; color: #17352d; }
+    label { display: block; margin: 1rem 0 .4rem; }
+    input, select, button { box-sizing: border-box; font: inherit; padding: .6rem; max-width: 100%; }
+    input:not([type=checkbox]), select { width: 100%; }
+    button { margin: .6rem .4rem .6rem 0; cursor: pointer; }
+    .notice { background: #fff5d9; border: 1px solid #bd8d11; padding: 1rem; }
+    #status { min-height: 1.6rem; }
+  </style>
+</head>
+<body>
+  <h1>DEMO — ข้อมูลติดต่อสมัครใจ</h1>
+  <p class="notice">นี่เป็นระบบสาธิตสำหรับโครงงาน ไม่มีเจ้าหน้าที่จริงรับเรื่อง ไม่มีการโทรกลับหรือแจ้งโรงพยาบาล และไม่ใช่ช่องทางช่วยเหลือฉุกเฉิน</p>
+  <p>การให้ข้อมูลนี้เป็นความสมัครใจเพื่อสาธิตการเชื่อมบัญชี LINE กับช่องทางติดต่อ คุณยังใช้แชทบอทเดิมได้แม้ไม่กรอกหรือไม่ยินยอม ชื่อ เบอร์โทร และอีเมลที่กรอกไม่ได้ผ่านการพิสูจน์ตัวตนหรือยืนยันว่าเป็นเจ้าของช่องทางนั้น คุณแก้ไขหรือถอนความยินยอมได้ทุกเมื่อ</p>
+  <form id="contact-form">
+    <label for="preferred_name">ชื่อที่ต้องการให้เรียก</label>
+    <input id="preferred_name" maxlength="80" autocomplete="nickname" required>
+    <label for="contact_method">ช่องทางติดต่อสมัครใจ</label>
+    <select id="contact_method">
+      <option value="none">ไม่ระบุ</option>
+      <option value="phone">เบอร์โทร (ไม่ยืนยันด้วย OTP)</option>
+      <option value="email">อีเมล</option>
+    </select>
+    <label for="contact_value">ข้อมูลติดต่อ (เว้นว่างได้เมื่อไม่ระบุ)</label>
+    <input id="contact_value" maxlength="254" autocomplete="off">
+    <label><input id="consent" type="checkbox"> ฉันยินยอมให้เก็บข้อมูลที่กรอกเพื่อสาธิตการเชื่อมบัญชี LINE กับช่องทางติดต่อ{% if not contact_only %} และแสดงต่อผู้ตรวจสอบ demo ที่ได้รับสิทธิ์{% endif %}</label>
+    <button id="save" type="submit" disabled>บันทึกข้อมูลสมัครใจ</button>
+  </form>
+  <button id="sample" type="button" disabled{% if contact_only %} hidden{% endif %}>สร้างเคสตัวอย่างสังเคราะห์</button>
+  <button id="withdraw" type="button" disabled>ถอนความยินยอมและลบข้อมูลติดต่อ</button>
+  <p id="status" role="status"></p>
+  <script>
+    const liffId = {{ liff_id|tojson }};
+    let idToken = null;
+    let sampleKey = null;
+    const status = document.getElementById('status');
+    const save = document.getElementById('save');
+    const sample = document.getElementById('sample');
+    const withdraw = document.getElementById('withdraw');
+    function setStatus(message) { status.textContent = message; }
+    async function api(path, method, body) {
+      if (!idToken) throw new Error('ยังไม่ได้ยืนยันตัวตนผ่าน LINE');
+      const response = await fetch(path, {
+        method, credentials: 'omit', cache: 'no-store',
+        headers: { 'Authorization': `Bearer ${idToken}`, 'Content-Type': 'application/json' },
+        body: body ? JSON.stringify(body) : undefined
+      });
+      if (!response.ok) throw new Error(`คำขอไม่สำเร็จ (${response.status})`);
+      return response.json();
+    }
+    async function initialize() {
+      try {
+        await liff.init({ liffId });
+        if (!liff.isLoggedIn()) { liff.login(); return; }
+        idToken = liff.getIDToken();
+        if (!idToken) throw new Error('ไม่พบ LINE ID token');
+        const contact = await api('/demo/api/contact', 'GET');
+        if (contact.consent) {
+          document.getElementById('preferred_name').value = contact.preferred_name;
+          document.getElementById('contact_method').value = contact.contact_method;
+          document.getElementById('contact_value').value = contact.contact_value;
+          document.getElementById('consent').checked = true;
+          sample.disabled = false;
+          withdraw.disabled = false;
+        }
+        save.disabled = false;
+        setStatus(contact.consent ? 'โหลดข้อมูลที่เคยให้ความยินยอมแล้ว' : 'ยังไม่มีข้อมูลที่ได้รับความยินยอม');
+      } catch (error) { setStatus('เปิดฟอร์มไม่ได้ กรุณาตรวจการเข้าสู่ระบบ LINE และลองใหม่'); }
+    }
+    document.getElementById('contact-form').addEventListener('submit', async event => {
+      event.preventDefault();
+      if (!document.getElementById('consent').checked) { setStatus('ยังไม่ได้ให้ความยินยอม จึงไม่บันทึกข้อมูล'); return; }
+      save.disabled = true;
+      try {
+        await api('/demo/api/contact', 'PUT', {
+          preferred_name: document.getElementById('preferred_name').value,
+          contact_method: document.getElementById('contact_method').value,
+          contact_value: document.getElementById('contact_value').value,
+          consent: true
+        });
+        sample.disabled = false; withdraw.disabled = false;
+        setStatus('บันทึกความยินยอมและข้อมูลแล้ว');
+      } catch (error) { setStatus(error.message); }
+      finally { save.disabled = false; }
+    });
+    sample.addEventListener('click', async () => {
+      sample.disabled = true;
+      if (!sampleKey) sampleKey = crypto.randomUUID().replaceAll('-', '');
+      try {
+        const result = await api('/demo/api/cases/sample', 'POST', { idempotency_key: sampleKey });
+        setStatus(`สร้างเคสสังเคราะห์แล้ว: ${result.case_id.slice(0, 12)}… ไม่มีการแจ้งบุคคลภายนอก`);
+        sampleKey = null;
+      } catch (error) { setStatus(error.message); }
+      finally { sample.disabled = false; }
+    });
+    withdraw.addEventListener('click', async () => {
+      withdraw.disabled = true;
+      try {
+        await api('/demo/api/contact', 'DELETE');
+        document.getElementById('preferred_name').value = '';
+        document.getElementById('contact_value').value = '';
+        document.getElementById('contact_method').value = 'none';
+        document.getElementById('consent').checked = false;
+        sample.disabled = true;
+        setStatus('ถอนความยินยอมแล้ว ข้อมูลติดต่อถูกลบจากระเบียน demo');
+      } catch (error) { setStatus(error.message); withdraw.disabled = false; }
+    });
+    initialize();
+  </script>
+</body>
+</html>
