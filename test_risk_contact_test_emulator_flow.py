@@ -54,7 +54,7 @@ def require(condition, label):
     print(f"PASS {label}")
 
 
-def make_app(module, db, allowlist):
+def make_app(module, db, allowlist, auth_mode=None):
     test_env = {
         "RISK_CONTACT_TEST_PROJECT_ID": TEST_PROJECT,
         "RISK_CONTACT_TEST_CREDENTIALS_JSON": json.dumps({"project_id": TEST_PROJECT}),
@@ -62,6 +62,7 @@ def make_app(module, db, allowlist):
         "RISK_CONTACT_TEST_LIFF_ID": "synthetic-liff",
         "RISK_CONTACT_TEST_LINE_LOGIN_CHANNEL_ID": "synthetic-channel",
         "RISK_CONTACT_TEST_ALLOWED_SUBJECT_KEYS": allowlist,
+        "RISK_CONTACT_TEST_AUTH_MODE": auth_mode or ("legacy_allowlist" if allowlist else "deny_all"),
     }
     verifier = lambda token, channel: {
         "synthetic-token-a": FAKE_SUB_A,
@@ -153,6 +154,24 @@ def run_flow(db):
         require(result == {"eligible": 1, "deleted": 1, "skipped": 0}
                 and not ref_a.get().exists and not ref_b.get().exists,
                 "cleanup deletes only expired synthetic contact")
+
+        self_service = make_app(module, db, "", "verified_line_self_service").test_client()
+        require(self_service.get("/demo/api/contact", headers=a).json == {"consent": False}
+                and self_service.get("/demo/api/contact", headers=b).json == {"consent": False},
+                "self-service starts with separate empty contacts")
+        require(self_service.put("/demo/api/contact", json=first, headers=a).status_code == 200
+                and self_service.put("/demo/api/contact", json={**first,
+                    "preferred_name": "Synthetic B"}, headers=b).status_code == 200,
+                "both verified synthetic users may consent independently")
+        require(self_service.get("/demo/api/contact", headers=a).json["preferred_name"]
+                == "Synthetic A" and
+                self_service.get("/demo/api/contact?user_id=synthetic-contact-user-a",
+                                 headers=b).json["preferred_name"] == "Synthetic B",
+                "self-service never resolves client-supplied account identity")
+        require(self_service.delete("/demo/api/contact", headers=a).status_code == 200
+                and self_service.get("/demo/api/contact", headers=a).json == {"consent": False}
+                and self_service.get("/demo/api/contact", headers=b).json["consent"] is True,
+                "self-service withdrawal does not affect another user")
 
 
 def main():

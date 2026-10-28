@@ -73,7 +73,7 @@ def verify_line_identity(id_token: str, client_id: str) -> str | None:
 def register_risk_demo(app, db, line_client_id: str, identity_verifier=None,
                        transaction_runner=None, enable_event_simulator=False,
                        contact_only=False, contact_settings=None,
-                       allowed_subject_keys=None):
+                       allowed_subject_keys=None, contact_auth_mode="legacy_allowlist"):
     """Attach demo routes; refuse to start the demo without secure setup."""
     required = ["RISK_DEMO_IDENTITY_HMAC_KEY", "RISK_DEMO_LIFF_ID"]
     if not contact_only:
@@ -178,7 +178,7 @@ def register_risk_demo(app, db, line_client_id: str, identity_verifier=None,
         if not isinstance(line_sub, str) or not line_sub:
             abort(401)
         key = subject_key(line_sub)
-        if contact_only and key not in (allowed_subject_keys or ()):
+        if contact_only and contact_auth_mode != "verified_line_self_service" and key not in (allowed_subject_keys or ()):
             abort(403)
         return key
 

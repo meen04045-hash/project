@@ -54,6 +54,7 @@ TEST_ENV = {
     "RISK_CONTACT_TEST_IDENTITY_HMAC_KEY": "h" * 40,
     "RISK_CONTACT_TEST_LIFF_ID": "synthetic-liff-id",
     "RISK_CONTACT_TEST_LINE_LOGIN_CHANNEL_ID": "synthetic-channel-id",
+    "RISK_CONTACT_TEST_AUTH_MODE": "legacy_allowlist",
 }
 
 
@@ -164,7 +165,8 @@ class IsolatedContactAppTests(unittest.TestCase):
             factory.assert_not_called()
 
     def test_missing_and_conflicting_configuration_fails_before_client_creation(self):
-        for missing in TEST_ENV.keys() - {"RISK_CONTACT_TEST_ALLOWED_SUBJECT_KEYS"}:
+        for missing in TEST_ENV.keys() - {"RISK_CONTACT_TEST_ALLOWED_SUBJECT_KEYS",
+                                          "RISK_CONTACT_TEST_AUTH_MODE"}:
             with self.subTest(missing=missing), patch.dict(os.environ, {
                     **TEST_ENV, missing: ""}, clear=True), \
                     patch.object(self.module, "create_contact_test_client") as create_client:
@@ -247,6 +249,68 @@ class IsolatedContactAppTests(unittest.TestCase):
                     self.module.create_app()
                 factory.assert_not_called()
 
+    def test_default_deny_all_and_invalid_modes_fail_closed(self):
+        for mode in (None, "deny_all"):
+            with self.subTest(mode=mode):
+                env = {**TEST_ENV, "RISK_CONTACT_TEST_ALLOWED_SUBJECT_KEYS": ""}
+                if mode is None:
+                    env.pop("RISK_CONTACT_TEST_AUTH_MODE")
+                else:
+                    env["RISK_CONTACT_TEST_AUTH_MODE"] = mode
+                client = self.make_app(env=env).test_client()
+                self.assertEqual(client.get("/demo/api/contact", headers={
+                    "Authorization": "Bearer synthetic-token"}).status_code, 403)
+        for mode in ("", "open", "VERIFIED_LINE_SELF_SERVICE"):
+            with self.subTest(mode=mode), patch.dict(os.environ, {
+                    **TEST_ENV, "RISK_CONTACT_TEST_AUTH_MODE": mode}, clear=True), \
+                    patch.object(self.module, "create_contact_test_client") as factory:
+                with self.assertRaisesRegex(RuntimeError, "authorization mode"):
+                    self.module.create_app()
+                factory.assert_not_called()
+
+    def test_self_service_requires_verified_identity_and_isolates_subjects(self):
+        env = {**TEST_ENV, "RISK_CONTACT_TEST_AUTH_MODE": "verified_line_self_service",
+               "RISK_CONTACT_TEST_ALLOWED_SUBJECT_KEYS": ""}
+        verifier = lambda token, channel: {"a": "synthetic-user-a",
+                                           "b": "synthetic-user-b"}.get(token)
+        client = self.make_app(verifier, env).test_client()
+        a = {"Authorization": "Bearer a"}
+        b = {"Authorization": "Bearer b"}
+        payload = {"preferred_name": "Synthetic A", "contact_method": "email",
+                   "contact_value": "a@example.invalid", "consent": True}
+        self.assertEqual(client.get("/demo/api/contact").status_code, 401)
+        self.assertEqual(client.get("/demo/api/contact", headers={
+            "Authorization": "Bearer invalid"}).status_code, 401)
+        self.assertEqual(client.put("/demo/api/contact", json={**payload, "consent": False},
+                                    headers=a).status_code, 400)
+        self.assertEqual(client.put("/demo/api/contact", json={**payload,
+            "user_id": "synthetic-user-b"}, headers=a).status_code, 400)
+        self.assertEqual(client.put("/demo/api/contact", json=payload, headers=a).status_code, 200)
+        self.assertEqual(client.get("/demo/api/contact", headers=b).json, {"consent": False})
+        self.assertEqual(client.get("/demo/api/contact?user_id=synthetic-user-a",
+                                    headers=b).json, {"consent": False})
+        self.assertEqual(client.put("/demo/api/contact", json={**payload,
+            "preferred_name": "Synthetic B"}, headers=b).status_code, 200)
+        self.assertEqual(client.get("/demo/api/contact", headers=a).json["preferred_name"],
+                         "Synthetic A")
+        self.assertEqual(client.get("/demo/api/contact", headers=b).json["preferred_name"],
+                         "Synthetic B")
+        self.assertEqual(client.delete("/demo/api/contact", headers=a).status_code, 200)
+        self.assertEqual(client.get("/demo/api/contact", headers=a).json, {"consent": False})
+        self.assertEqual(client.get("/demo/api/contact", headers=b).json["preferred_name"],
+                         "Synthetic B")
+        self.assertEqual({rule.rule for rule in self.make_app(verifier, env).url_map.iter_rules()
+                          if rule.endpoint != "static"},
+                         {"/health", "/demo/contact-form", "/demo/api/contact"})
+
+    def test_self_service_rejects_nonempty_legacy_allowlist_before_client(self):
+        with patch.dict(os.environ, {**TEST_ENV,
+                "RISK_CONTACT_TEST_AUTH_MODE": "verified_line_self_service"}, clear=True), \
+                patch.object(self.module, "create_contact_test_client") as factory:
+            with self.assertRaisesRegex(RuntimeError, "conflicts with legacy allowlist"):
+                self.module.create_app()
+            factory.assert_not_called()
+
     def test_unapproved_verified_sub_has_no_contact_reads_or_writes(self):
         client = self.make_app(lambda token, channel: "synthetic-user-b").test_client()
         headers = {"Authorization": "Bearer synthetic-token"}
@@ -308,6 +372,16 @@ class IsolatedContactAppTests(unittest.TestCase):
             with self.subTest(claims=claims), patch("risk_case_demo.urlopen") as urlopen:
                 urlopen.return_value.__enter__.return_value.read.return_value = json.dumps(claims).encode()
                 self.assertIsNone(verify_line_identity("synthetic-token", "synthetic-channel-id"))
+
+    def test_line_verify_expired_token_response_is_rejected(self):
+        from urllib.error import HTTPError
+        from risk_case_demo import verify_line_identity
+
+        with patch("risk_case_demo.urlopen", side_effect=HTTPError(
+                "https://api.line.me/oauth2/v2.1/verify", 400,
+                "synthetic expired token", {}, None)):
+            self.assertIsNone(verify_line_identity("synthetic-expired-token",
+                                                    "synthetic-channel-id"))
 
 
 if __name__ == "__main__":
