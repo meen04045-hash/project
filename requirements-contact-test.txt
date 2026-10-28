@@ -1,0 +1,4 @@
+# Isolated Contact-Only TEST service; no chatbot, ML, or LINE Messaging SDK.
+Flask==3.0.3
+firebase-admin==6.5.0
+gunicorn==22.0.0
