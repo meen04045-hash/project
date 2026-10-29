@@ -9,7 +9,7 @@ const script = html.match(/<script>([\s\S]*?)<\/script>/)[1]
   .replace('{{ liff_id|tojson }}', '"synthetic-liff"');
 
 async function run({ loggedIn = true, token = 'synthetic-token', initError = false,
-                     apiStatus = 200 } = {}) {
+                     apiStatus = 200, apiContact = { consent: false } } = {}) {
   const elements = new Map();
   const calls = { login: 0, fetch: 0 };
   const document = { getElementById(id) {
@@ -31,12 +31,13 @@ async function run({ loggedIn = true, token = 'synthetic-token', initError = fal
     assert.equal(options.method, 'GET');
     assert.equal(options.headers.Authorization, `Bearer ${token}`);
     return { ok: apiStatus === 200, status: apiStatus,
-             json: async () => ({ consent: false }) };
+             json: async () => apiContact };
   };
   vm.runInNewContext(script, { document, liff, fetch, crypto: {}, console: {} });
   await new Promise(setImmediate);
   return { calls, status: elements.get('status').textContent,
-           saveDisabled: elements.get('save').disabled };
+           saveDisabled: elements.get('save').disabled,
+           receiptText: elements.get('demo-receipt').textContent };
 }
 
 test('in-LINE login with allowed API enables form', async () => {
@@ -80,4 +81,13 @@ test('invalid token 401 and API outage remain distinct', async () => {
   assert.match(outage.status, /ติดต่อระบบข้อมูลติดต่อไม่สำเร็จ/);
   assert.equal(invalid.saveDisabled, true);
   assert.equal(outage.saveDisabled, true);
+});
+
+test('own synthetic receipt is shown as text after an authorized read', async () => {
+  const result = await run({ apiContact: {
+    consent: true, preferred_name: 'Synthetic A', contact_method: 'none',
+    contact_value: '', demo_receipt: 'ABCDEF0123456789',
+  } });
+  assert.match(result.receiptText, /ABCDEF0123456789/);
+  assert.equal(result.saveDisabled, false);
 });

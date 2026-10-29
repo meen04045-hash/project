@@ -5,11 +5,14 @@ consumed here. Routes are registered only when RISK_DEMO_ENABLED=1.
 """
 
 from datetime import datetime, timedelta, timezone
+from collections import OrderedDict, deque
 import hashlib
 import hmac
 import os
 import re
 import secrets
+from threading import Lock
+from time import monotonic
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
@@ -25,6 +28,36 @@ CASE_ID_PATTERN = re.compile(r"[0-9a-f]{64}\Z")
 PHONE_PATTERN = re.compile(r"\+?[0-9][0-9 -]{6,19}\Z")
 EMAIL_PATTERN = re.compile(r"[^\s@]+@[^\s@]+\.[^\s@]+\Z")
 CONTACT_RETENTION = timedelta(days=7)
+CONTACT_REQUEST_BYTES = 1024
+CONTACT_PREAUTH_PER_MINUTE = 30
+CONTACT_WRITES_PER_MINUTE = 6
+
+
+class _BoundedWindowLimiter:
+    """Best-effort, per-process limiter; never a cross-worker security boundary."""
+
+    def __init__(self, limit, max_keys=256):
+        self.limit = limit
+        self.max_keys = max_keys
+        self.events = OrderedDict()
+        self.lock = Lock()
+
+    def allow(self, key):
+        current = monotonic()
+        with self.lock:
+            hits = self.events.get(key)
+            if hits is None:
+                if len(self.events) >= self.max_keys:
+                    self.events.popitem(last=False)
+                hits = deque()
+                self.events[key] = hits
+            self.events.move_to_end(key)
+            while hits and hits[0] <= current - 60:
+                hits.popleft()
+            if len(hits) >= self.limit:
+                return False
+            hits.append(current)
+            return True
 CASE_RETENTION = timedelta(days=7)
 LOGIN_WINDOW = timedelta(minutes=15)
 SESSION_LIFETIME = timedelta(minutes=30)
@@ -97,6 +130,8 @@ def register_risk_demo(app, db, line_client_id: str, identity_verifier=None,
     transaction_runner = transaction_runner or firestore.transactional
     hmac_key = config["RISK_DEMO_IDENTITY_HMAC_KEY"].encode("utf-8")
     demo = Blueprint("risk_demo", __name__)
+    preauth_limiter = _BoundedWindowLimiter(CONTACT_PREAUTH_PER_MINUTE)
+    write_limiter = _BoundedWindowLimiter(CONTACT_WRITES_PER_MINUTE)
 
     def now():
         return datetime.now(timezone.utc)
@@ -201,12 +236,15 @@ def register_risk_demo(app, db, line_client_id: str, identity_verifier=None,
             or record["expires_at"] <= now()
         ):
             return {"consent": False}
-        return {
+        public = {
             "consent": True,
             "preferred_name": record.get("preferred_name", ""),
             "contact_method": record.get("contact_method", "none"),
             "contact_value": record.get("contact_value", ""),
         }
+        if contact_only and isinstance(record.get("demo_receipt"), str):
+            public["demo_receipt"] = record["demo_receipt"]
+        return public
 
     def case_public(case_id, record):
         item = {
@@ -246,7 +284,32 @@ def register_risk_demo(app, db, line_client_id: str, identity_verifier=None,
 
     @demo.route("/api/contact", methods=["GET", "PUT", "DELETE"])
     def contact():
+        early_data = None
+        if contact_only and contact_auth_mode == "verified_line_self_service":
+            if request.content_length is not None and request.content_length > CONTACT_REQUEST_BYTES:
+                abort(413)
+            if request.method == "PUT":
+                if not request.is_json:
+                    abort(415)
+                early_data = request.get_json(silent=True)
+                if (not isinstance(early_data, dict)
+                        or set(early_data) != {"preferred_name", "contact_method",
+                                               "contact_value", "consent"}
+                        or early_data["consent"] is not True):
+                    abort(400)
+            # Use the server-observed peer only; never trust a client-supplied
+            # X-Forwarded-For value. This is best effort behind Render proxies.
+            if not preauth_limiter.allow(request.remote_addr or "unknown"):
+                response = jsonify(error="rate_limited")
+                response.headers["Retry-After"] = "60"
+                return response, 429
         key = bearer_subject()
+        if (contact_only and contact_auth_mode == "verified_line_self_service"
+                and request.method in ("PUT", "DELETE")
+                and not write_limiter.allow(key)):
+            response = jsonify(error="rate_limited")
+            response.headers["Retry-After"] = "60"
+            return response, 429
         ref = db.collection("risk_demo_contacts").document(key)
         if request.method == "GET":
             return jsonify(contact_public(ref.get().to_dict()))
@@ -255,7 +318,7 @@ def register_risk_demo(app, db, line_client_id: str, identity_verifier=None,
             ref.set({"consent": False, "updated_at": now(), "expires_at": now() + CONTACT_RETENTION})
             return jsonify(consent=False)
 
-        data = request.get_json(silent=True)
+        data = early_data if early_data is not None else request.get_json(silent=True)
         if not isinstance(data, dict) or set(data) != {"preferred_name", "contact_method", "contact_value", "consent"}:
             abort(400)
         name, method, value = data["preferred_name"], data["contact_method"], data["contact_value"]
@@ -274,12 +337,18 @@ def register_risk_demo(app, db, line_client_id: str, identity_verifier=None,
             abort(400)
         if method not in ("none", "phone", "email") or len(value) > 254:
             abort(400)
-        ref.set({
+        saved = {
             "consent": True, "preferred_name": name,
             "contact_method": method, "contact_value": value,
             "updated_at": now(), "expires_at": now() + CONTACT_RETENTION,
-        })
-        return jsonify(consent=True)
+        }
+        if contact_only:
+            saved["demo_receipt"] = secrets.token_hex(8).upper()
+        ref.set(saved)
+        response = {"consent": True}
+        if contact_only:
+            response["demo_receipt"] = saved["demo_receipt"]
+        return jsonify(response)
 
     if contact_only:
         app.register_blueprint(demo, url_prefix="/demo")

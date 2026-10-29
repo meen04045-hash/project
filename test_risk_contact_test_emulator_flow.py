@@ -159,10 +159,16 @@ def run_flow(db):
         require(self_service.get("/demo/api/contact", headers=a).json == {"consent": False}
                 and self_service.get("/demo/api/contact", headers=b).json == {"consent": False},
                 "self-service starts with separate empty contacts")
-        require(self_service.put("/demo/api/contact", json=first, headers=a).status_code == 200
-                and self_service.put("/demo/api/contact", json={**first,
-                    "preferred_name": "Synthetic B"}, headers=b).status_code == 200,
+        saved_a = self_service.put("/demo/api/contact", json=first, headers=a)
+        saved_b = self_service.put("/demo/api/contact", json={**first,
+                    "preferred_name": "Synthetic B"}, headers=b)
+        require(saved_a.status_code == 200 and saved_b.status_code == 200,
                 "both verified synthetic users may consent independently")
+        receipt_a = saved_a.json["demo_receipt"]
+        require(ref_a.get().to_dict()["demo_receipt"] == receipt_a
+                and self_service.get("/demo/api/contact", headers=a).json["demo_receipt"]
+                    == receipt_a and receipt_a != saved_b.json["demo_receipt"],
+                "random receipt matches only its saved TEST contact record")
         require(self_service.get("/demo/api/contact", headers=a).json["preferred_name"]
                 == "Synthetic A" and
                 self_service.get("/demo/api/contact?user_id=synthetic-contact-user-a",
@@ -170,6 +176,7 @@ def run_flow(db):
                 "self-service never resolves client-supplied account identity")
         require(self_service.delete("/demo/api/contact", headers=a).status_code == 200
                 and self_service.get("/demo/api/contact", headers=a).json == {"consent": False}
+                and "demo_receipt" not in ref_a.get().to_dict()
                 and self_service.get("/demo/api/contact", headers=b).json["consent"] is True,
                 "self-service withdrawal does not affect another user")
 

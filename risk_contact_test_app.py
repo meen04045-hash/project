@@ -58,6 +58,7 @@ def create_app(identity_verifier=None):
         raise RuntimeError("TEST contact authorization mode conflicts with legacy allowlist")
     db = create_contact_test_client()
     app = Flask(__name__)
+    app.config["MAX_CONTENT_LENGTH"] = 1024
     register_risk_demo(app, db, channel_id, identity_verifier=identity_verifier,
                        contact_only=True, contact_settings=settings,
                        allowed_subject_keys=frozenset(entries), contact_auth_mode=auth_mode)

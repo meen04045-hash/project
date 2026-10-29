@@ -36,15 +36,20 @@
   <button id="sample" type="button" disabled{% if contact_only %} hidden{% endif %}>สร้างเคสตัวอย่างสังเคราะห์</button>
   <button id="withdraw" type="button" disabled>ถอนความยินยอมและลบข้อมูลติดต่อ</button>
   <p id="status" role="status"></p>
+  {% if contact_only %}<p id="demo-receipt" aria-live="polite"></p>{% endif %}
   <script>
     const liffId = {{ liff_id|tojson }};
     let idToken = null;
     let sampleKey = null;
     const status = document.getElementById('status');
+    const receipt = document.getElementById('demo-receipt');
     const save = document.getElementById('save');
     const sample = document.getElementById('sample');
     const withdraw = document.getElementById('withdraw');
     function setStatus(message) { status.textContent = message; }
+    function showReceipt(value) {
+      if (receipt) receipt.textContent = value ? `รหัสอ้างอิงข้อมูลจำลอง: ${value}` : '';
+    }
     async function api(path, method, body) {
       if (!idToken) throw new Error('ยังไม่ได้ยืนยันตัวตนผ่าน LINE');
       const response = await fetch(path, {
@@ -70,6 +75,7 @@
         stage = 'contact';
         const contact = await api('/demo/api/contact', 'GET');
         if (contact.consent) {
+          showReceipt(contact.demo_receipt);
           document.getElementById('preferred_name').value = contact.preferred_name;
           document.getElementById('contact_method').value = contact.contact_method;
           document.getElementById('contact_value').value = contact.contact_value;
@@ -77,6 +83,7 @@
           sample.disabled = false;
           withdraw.disabled = false;
         }
+        else showReceipt(null);
         save.disabled = false;
         setStatus(contact.consent ? 'โหลดข้อมูลที่เคยให้ความยินยอมแล้ว' : 'ยังไม่มีข้อมูลที่ได้รับความยินยอม');
       } catch (error) {
@@ -98,12 +105,13 @@
       if (!document.getElementById('consent').checked) { setStatus('ยังไม่ได้ให้ความยินยอม จึงไม่บันทึกข้อมูล'); return; }
       save.disabled = true;
       try {
-        await api('/demo/api/contact', 'PUT', {
+        const result = await api('/demo/api/contact', 'PUT', {
           preferred_name: document.getElementById('preferred_name').value,
           contact_method: document.getElementById('contact_method').value,
           contact_value: document.getElementById('contact_value').value,
           consent: true
         });
+        showReceipt(result.demo_receipt);
         sample.disabled = false; withdraw.disabled = false;
         setStatus('บันทึกความยินยอมและข้อมูลแล้ว');
       } catch (error) { setStatus(error.message); }
@@ -123,6 +131,7 @@
       withdraw.disabled = true;
       try {
         await api('/demo/api/contact', 'DELETE');
+        showReceipt(null);
         document.getElementById('preferred_name').value = '';
         document.getElementById('contact_value').value = '';
         document.getElementById('contact_method').value = 'none';

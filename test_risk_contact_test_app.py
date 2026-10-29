@@ -4,9 +4,10 @@ import copy
 import hashlib
 import hmac
 import importlib
+import json
 import os
 import unittest
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 
 class FakeSnapshot:
@@ -213,7 +214,13 @@ class IsolatedContactAppTests(unittest.TestCase):
         b = {"Authorization": "Bearer synthetic-token-b"}
         payload = {"preferred_name": "Test A", "contact_method": "none",
                    "contact_value": "", "consent": True}
-        self.assertEqual(client.put("/demo/api/contact", json=payload, headers=a).status_code, 200)
+        saved_a = client.put("/demo/api/contact", json=payload, headers=a)
+        self.assertEqual(saved_a.status_code, 200)
+        receipt_a = saved_a.json["demo_receipt"]
+        self.assertRegex(receipt_a, r"^[0-9A-F]{16}$")
+        self.assertEqual(self.db.store["risk_demo_contacts/" + allowed_key("synthetic-user-a")]
+                         ["demo_receipt"], receipt_a)
+        self.assertEqual(client.get("/demo/api/contact", headers=a).json["demo_receipt"], receipt_a)
         self.assertIn("risk_demo_contacts/" + allowed_key("synthetic-user-a"), self.db.store)
         self.assertEqual(client.get("/demo/api/contact", headers=a).json["preferred_name"], "Test A")
         self.assertEqual(client.get("/demo/api/contact", headers=b).status_code, 403)
@@ -285,7 +292,12 @@ class IsolatedContactAppTests(unittest.TestCase):
                                     headers=a).status_code, 400)
         self.assertEqual(client.put("/demo/api/contact", json={**payload,
             "user_id": "synthetic-user-b"}, headers=a).status_code, 400)
-        self.assertEqual(client.put("/demo/api/contact", json=payload, headers=a).status_code, 200)
+        saved_a = client.put("/demo/api/contact", json=payload, headers=a)
+        self.assertEqual(saved_a.status_code, 200)
+        receipt_a = saved_a.json["demo_receipt"]
+        self.assertRegex(receipt_a, r"^[0-9A-F]{16}$")
+        self.assertEqual(self.db.store["risk_demo_contacts/" + allowed_key("synthetic-user-a")]
+                         ["demo_receipt"], receipt_a)
         self.assertEqual(client.get("/demo/api/contact", headers=b).json, {"consent": False})
         self.assertEqual(client.get("/demo/api/contact?user_id=synthetic-user-a",
                                     headers=b).json, {"consent": False})
@@ -295,8 +307,12 @@ class IsolatedContactAppTests(unittest.TestCase):
                          "Synthetic A")
         self.assertEqual(client.get("/demo/api/contact", headers=b).json["preferred_name"],
                          "Synthetic B")
+        self.assertEqual(client.get("/demo/api/contact?demo_receipt=" + receipt_a,
+                                    headers=b).json["preferred_name"], "Synthetic B")
         self.assertEqual(client.delete("/demo/api/contact", headers=a).status_code, 200)
         self.assertEqual(client.get("/demo/api/contact", headers=a).json, {"consent": False})
+        self.assertNotIn("demo_receipt", self.db.store[
+            "risk_demo_contacts/" + allowed_key("synthetic-user-a")])
         self.assertEqual(client.get("/demo/api/contact", headers=b).json["preferred_name"],
                          "Synthetic B")
         self.assertEqual({rule.rule for rule in self.make_app(verifier, env).url_map.iter_rules()
@@ -310,6 +326,71 @@ class IsolatedContactAppTests(unittest.TestCase):
             with self.assertRaisesRegex(RuntimeError, "conflicts with legacy allowlist"):
                 self.module.create_app()
             factory.assert_not_called()
+
+    def test_self_service_burst_limits_and_window_expiry(self):
+        env = {**TEST_ENV, "RISK_CONTACT_TEST_AUTH_MODE": "verified_line_self_service",
+               "RISK_CONTACT_TEST_ALLOWED_SUBJECT_KEYS": ""}
+        client = self.make_app(lambda token, channel: {
+            "a": "synthetic-user-a", "b": "synthetic-user-b"}.get(token), env).test_client()
+        payload = {"preferred_name": "Synthetic", "contact_method": "none",
+                   "contact_value": "", "consent": True}
+        with patch("risk_case_demo.monotonic", return_value=100):
+            for _ in range(30):
+                self.assertEqual(client.get("/demo/api/contact").status_code, 401)
+            limited = client.get("/demo/api/contact")
+            self.assertEqual(limited.status_code, 429)
+            self.assertEqual(limited.headers["Retry-After"], "60")
+            self.assertEqual(limited.headers["Cache-Control"], "no-store")
+        with patch("risk_case_demo.monotonic", return_value=161):
+            self.assertEqual(client.get("/demo/api/contact").status_code, 401)
+            for _ in range(6):
+                self.assertEqual(client.put("/demo/api/contact", json=payload,
+                                            headers={"Authorization": "Bearer a"}).status_code, 200)
+            self.assertEqual(client.put("/demo/api/contact", json=payload,
+                                        headers={"Authorization": "Bearer a"}).status_code, 429)
+            self.assertEqual(client.put("/demo/api/contact", json=payload,
+                                        headers={"Authorization": "Bearer b"}).status_code, 200)
+        with patch("risk_case_demo.monotonic", return_value=222):
+            self.assertEqual(client.put("/demo/api/contact", json=payload,
+                                        headers={"Authorization": "Bearer a"}).status_code, 200)
+
+    def test_self_service_rejects_oversize_and_malformed_before_line_verify(self):
+        env = {**TEST_ENV, "RISK_CONTACT_TEST_AUTH_MODE": "verified_line_self_service",
+               "RISK_CONTACT_TEST_ALLOWED_SUBJECT_KEYS": ""}
+        verifier = Mock(return_value="synthetic-user-a")
+        client = self.make_app(verifier, env).test_client()
+        path = "/demo/api/contact"
+        self.assertEqual(client.put(path, data="plain", content_type="text/plain").status_code, 415)
+        self.assertEqual(client.put(path, data="{", content_type="application/json").status_code, 400)
+        self.assertEqual(client.put(path, json={"preferred_name": "x" * 2000,
+            "contact_method": "none", "contact_value": "", "consent": True}).status_code, 413)
+        self.assertEqual(client.post(path).status_code, 405)
+        verifier.assert_not_called()
+        self.assertEqual(self.db.store, {})
+
+    def test_contact_limit_cache_is_bounded(self):
+        from risk_case_demo import _BoundedWindowLimiter
+        limiter = _BoundedWindowLimiter(1, max_keys=2)
+        with patch("risk_case_demo.monotonic", return_value=100):
+            for key in ("synthetic-a", "synthetic-b", "synthetic-c"):
+                self.assertTrue(limiter.allow(key))
+            self.assertLessEqual(len(limiter.events), 2)
+
+    def test_synthetic_thai_utf8_form_fits_request_limit(self):
+        env = {**TEST_ENV, "RISK_CONTACT_TEST_AUTH_MODE": "verified_line_self_service",
+               "RISK_CONTACT_TEST_ALLOWED_SUBJECT_KEYS": ""}
+        client = self.make_app(env=env).test_client()
+        payload = {"preferred_name": "ผู้ใช้ทดลอง", "contact_method": "email",
+                   "contact_value": "demo@example.invalid", "consent": True}
+        body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
+        self.assertLessEqual(len(body), 1024)
+        response = client.put("/demo/api/contact", data=body,
+                              content_type="application/json",
+                              headers={"Authorization": "Bearer synthetic-token"})
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(client.get("/demo/api/contact", headers={
+            "Authorization": "Bearer synthetic-token"}).json["preferred_name"],
+                         "ผู้ใช้ทดลอง")
 
     def test_unapproved_verified_sub_has_no_contact_reads_or_writes(self):
         client = self.make_app(lambda token, channel: "synthetic-user-b").test_client()
