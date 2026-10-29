@@ -843,7 +843,7 @@ def handle_message(event):
     elif ordinary_route in (
         "direct_advice", "positive_thinking_advice", "bot_identity",
         "friend_conflict", "boredom", "feedback_already_told",
-        "feedback_frustrated", "feedback_dislike",
+        "feedback_frustrated", "feedback_dislike", "conversation_closing",
     ):
 
         if pending_action:

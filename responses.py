@@ -2,6 +2,7 @@
 
 from dataclasses import dataclass
 from random import choice
+import re
 from typing import Callable, Sequence
 
 
@@ -161,6 +162,28 @@ SMALLTALK = {
     "open_chat": "คุยกันได้ครับ มีเรื่องไหนที่อยากเริ่มไหม",
 }
 
+CONVERSATION_CLOSINGS = {
+    "thanks": "ยินดีครับ 😊",
+    "next_step": "ยินดีครับ 😊 ค่อย ๆ เริ่มทีละอย่างตามที่ไหวนะครับ ไม่ต้องกดดันตัวเองมากเกินไป",
+    "goodbye": "ไว้คุยกันใหม่นะครับ ดูแลตัวเองด้วยครับ",
+}
+
+
+def conversation_closing_kind(text: str) -> str | None:
+    # Match the entire utterance, never an arbitrary occurrence of gratitude.
+    # Unknown continuations/questions retain the existing ordinary routing.
+    simple = re.sub(r"\s+", " ", text.strip()).rstrip(" .!。！😊🙏")
+    polite = r"(?:นะ)?(?:ครับ|ค่ะ|คะ|จ้า|จ้ะ)?"
+    if re.fullmatch(r"(?:ไว้คุยกันใหม่|ไปก่อน)" + polite, simple):
+        return "goodbye"
+    thanks = r"(?:โอเค" + polite + r"[ ,]*)?ขอบคุณ(?:มาก)?(?:สำหรับคำแนะนำ)?" + polite
+    if re.fullmatch(thanks, simple):
+        return "thanks"
+    if re.fullmatch(thanks + r"[ ,]*(?:เดี๋ยว)?จะลอง(?:ทำทีละอย่างดู|ทำดู|ทำตามคำแนะนำดู)" + polite, simple):
+        return "next_step"
+    return None
+
+
 FALLBACK = (
     "ถ้ายังไม่รู้ว่าจะเริ่มจากตรงไหน เล่าในส่วนที่อยู่ในใจก่อนก็ได้ครับ",
     "ค่อย ๆ เล่าเพิ่มได้ครับ ว่าตอนนี้มีเรื่องไหนที่อยากพูดถึงมากที่สุด",
@@ -256,6 +279,8 @@ def get_direct_advice(problem: str | None) -> Fragment:
 def select_phase1_route(
     text: str, *, eligible_intent: str | None, eligible_support: str | None
 ) -> str:
+    if eligible_support != "crisis_support" and conversation_closing_kind(text) is not None:
+        return "conversation_closing"
     if any(phrase in text for phrase in ("แค่อยากให้ฟัง", "อยากให้ฟัง", "ยังไม่ต้องแนะนำ", "ไม่ต้องแนะนำ", "ไม่อยากได้คำแนะนำ", "ไม่อยากให้แนะนำ", "ไม่ได้อยากให้แนะนำ")):
         return "listener"
     if "อยากระบาย" in text or "ขอระบาย" in text:
@@ -314,6 +339,8 @@ def compose_response(
     problem: str | None = None, style: str | None = None,
     choose: Chooser = choice,
 ) -> ResponseDraft:
+    if route == "conversation_closing":
+        return ResponseDraft(CONVERSATION_CLOSINGS[conversation_closing_kind(text) or "thanks"], route)
     if route == "bot_identity":
         return ResponseDraft(BOT_IDENTITY, route)
     if route in ("feedback_already_told", "feedback_frustrated", "feedback_dislike"):
@@ -346,7 +373,7 @@ def compose_response(
     if route == "emotional_support":
         return ResponseDraft(choose(EMOTIONAL_SUPPORT), route, semantic_tags=("acknowledgement", "action"))
     if route == "smalltalk":
-        key = "thanks" if "ขอบคุณ" in text else "greeting" if ("สวัสดี" in text or "หวัดดี" in text) else "open_chat"
+        key = "thanks" if conversation_closing_kind(text) in ("thanks", "next_step") else "greeting" if ("สวัสดี" in text or "หวัดดี" in text) else "open_chat"
         return ResponseDraft(SMALLTALK[key], route, semantic_tags=("invitation",) if key != "thanks" else ())
 
     support_route = "advice" if route == "advice_offer" else route

@@ -336,7 +336,7 @@ class Phase1Tests(unittest.TestCase):
             node.module.split(".")[0]
             for node in tree.body if isinstance(node, ast.ImportFrom)
         }
-        self.assertEqual(imports, {"dataclasses", "random", "typing"})
+        self.assertEqual(imports, {"dataclasses", "random", "re", "typing"})
 
     def test_phase1_matrix_routes_in_mocked_handle_message(self):
         cases = [

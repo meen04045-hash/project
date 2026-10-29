@@ -314,5 +314,103 @@ class ResponseRoutingPhase1Tests(unittest.TestCase):
         self.assertIsNone(state["pending"])
 
 
+class ConversationClosingTests(unittest.TestCase):
+    reply_for = ResponseRoutingPhase1Tests.reply_for
+
+    def test_clear_thanks_closing_independent_of_ordinary_ml_labels(self):
+        texts = (
+            "ขอบคุณครับ เดี๋ยวจะลองทำทีละอย่างดู",
+            "ขอบคุณมากนะ",
+            "โอเคครับ ขอบคุณสำหรับคำแนะนำ",
+        )
+        for text in texts:
+            for overrides in ({}, {"intent": "ask_advice", "intent_conf": .99},
+                              {"intent": "information", "intent_conf": .99},
+                              {"support_need": "advice", "support_conf": .99}):
+                with self.subTest(text=text, overrides=overrides):
+                    reply, routes, state, _ = self.reply_for(text, overrides)
+                    self.assertEqual(routes, ["conversation_closing"])
+                    self.assertIn(reply, responses.CONVERSATION_CLOSINGS.values())
+                    self.assertNotIn(reply, responses.FALLBACK)
+                    self.assertIsNone(state["pending"])
+                    self.assertNotIn("?", reply)
+                    self.assertNotIn("invitation", responses.compose_response(text, route="conversation_closing").semantic_tags)
+
+    def test_short_thanks(self):
+        for text in ("ขอบคุณ", "ขอบคุณครับ", "ขอบคุณค่ะ!", " ขอบคุณมากนะ 🙏 "):
+            with self.subTest(text=text):
+                reply, routes, _, _ = self.reply_for(text)
+                self.assertEqual(routes, ["conversation_closing"])
+                self.assertEqual(reply, responses.CONVERSATION_CLOSINGS["thanks"])
+
+    def test_goodbye(self):
+        for text in ("ไว้คุยกันใหม่นะ", "ไปก่อนนะครับ"):
+            with self.subTest(text=text):
+                reply, routes, _, _ = self.reply_for(text)
+                self.assertEqual(routes, ["conversation_closing"])
+                self.assertEqual(reply, responses.CONVERSATION_CLOSINGS["goodbye"])
+
+    def test_thanks_with_continuing_request_is_not_closed(self):
+        for text in (
+            "ขอบคุณนะ แต่ตอนนี้ยังไม่รู้จะทำยังไง ช่วยแนะนำอีกหน่อย",
+            "ขอบคุณครับ แล้วควรทำยังไงต่อ",
+            "ขอบคุณนะ ช่วยแนะนำหน่อย",
+            "ขอบคุณมากนะ อยากระบายต่อ",
+            "คำว่า ขอบคุณมากนะ หมายถึงอะไร",
+            "ไปก่อนนะครับ แต่ช่วยแนะนำหน่อย",
+        ):
+            with self.subTest(text=text):
+                self.assertIsNone(responses.conversation_closing_kind(text))
+                for overrides in ({}, {"intent": "smalltalk", "intent_conf": .99}):
+                    reply, routes, _, _ = self.reply_for(text, overrides)
+                    self.assertNotIn("conversation_closing", routes)
+                    self.assertNotIn(reply, responses.CONVERSATION_CLOSINGS.values())
+                    self.assertNotEqual(reply, responses.SMALLTALK["thanks"])
+
+    def test_safety_overrides_thanks_and_goodbye(self):
+        cases = (
+            ("ขอบคุณครับ แต่ตอนนี้อยากตาย", {}),
+            ("ไปก่อนนะครับ อยากทำร้ายตัวเอง", {}),
+            ("ขอบคุณมากนะ", {"risk": "risk_immediate_danger", "risk_conf": .99}),
+            ("ขอบคุณครับ เดี๋ยวจะลองทำทีละอย่างดู", {"risk": "risk_suicide_plan", "risk_conf": .99}),
+            ("ไว้คุยกันใหม่นะ", {"intent": "crisis_help", "intent_conf": .99}),
+        )
+        for text, overrides in cases:
+            with self.subTest(text=text, overrides=overrides):
+                reply, routes, state, _ = self.reply_for(text, overrides, source_literal("PENDING_ADVICE"))
+                self.assertTrue(reply.startswith("🚨"))
+                self.assertEqual(routes, [])
+                self.assertIsNone(state["pending"])
+
+    def test_closing_clears_pending_advice_without_new_offer(self):
+        reply, routes, state, logs = self.reply_for(
+            "ขอบคุณครับ เดี๋ยวจะลองทำทีละอย่างดู", pending=source_literal("PENDING_ADVICE"))
+        self.assertEqual(routes, ["conversation_closing"])
+        self.assertEqual(reply, responses.CONVERSATION_CLOSINGS["next_step"])
+        self.assertIsNone(state["pending"])
+        self.assertEqual(state["writes"], [None])
+        self.assertEqual(len(logs), 1)
+
+    def test_existing_continuing_routes(self):
+        cases = (
+            ("ขอบคุณนะ แค่อยากให้ฟัง", {}, "listener"),
+            ("ขอบคุณนะ ช่วยแนะนำหน่อย", {}, "direct_advice"),
+            ("ขอบคุณนะ อยากระบายต่อ", {}, "venting"),
+            ("ขอบคุณนะ อยากรู้เรื่องนี้", {"intent": "information", "intent_conf": .99}, None),
+            ("ขอบคุณมากนะ", {"support_need": "crisis_support", "support_conf": .99}, None),
+        )
+        for text, overrides, expected in cases:
+            with self.subTest(text=text):
+                _, routes, _, _ = self.reply_for(text, overrides)
+                self.assertEqual(routes, [expected] if expected else [])
+
+    def test_positive_statements_do_not_prove_risk_resolution(self):
+        self.assertIsNone(responses.conversation_closing_kind("ตอนนี้ดีขึ้นแล้ว"))
+        reply, routes, _, _ = self.reply_for(
+            "ตอนนี้ดีขึ้นแล้ว", {"risk": "risk_immediate_danger", "risk_conf": .99})
+        self.assertTrue(reply.startswith("🚨"))
+        self.assertEqual(routes, [])
+
+
 if __name__ == "__main__":
     unittest.main()
